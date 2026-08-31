@@ -1,4 +1,4 @@
-# Contributing to API Inspector
+# Contributing to Apii
 
 感謝你考慮貢獻！本專案採用 MIT 授權，歡迎任何形式的貢獻。
 
