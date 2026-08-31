@@ -222,13 +222,34 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === "CLOSE_SIDEPANEL") {
+  if (msg.type === "CLOSE_SIDEPANEL" || msg.type === "CLOSE_SIDEPANEL_ROBUST") {
     (async () => {
       try {
         if (chrome.sidePanel) {
-          // try to disable to hide
+          // 盡量帶 windowId 精準關閉
+          let wid = msg.windowId;
+          if (!wid && sender.tab) wid = sender.tab.windowId;
+          if (!wid) {
+            try {
+              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+              if (tabs[0]) wid = tabs[0].windowId;
+            } catch {}
+          }
+          // 嘗試 close API（若存在）
+          if (wid !== undefined && typeof chrome.sidePanel.close === "function") {
+            try { await chrome.sidePanel.close({ windowId: wid }); } catch {}
+          }
+          // 再嘗試 disable
+          try {
+            if (wid !== undefined) await chrome.sidePanel.setOptions({ enabled: false, windowId: wid });
+            else await chrome.sidePanel.setOptions({ enabled: false });
+          } catch {}
           try { await chrome.sidePanel.setOptions({ enabled: false }); } catch {}
           setTimeout(async () => {
+            try {
+              if (wid !== undefined) await chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html", windowId: wid });
+              else await chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" });
+            } catch {}
             try { await chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); } catch {}
           }, 800);
         }

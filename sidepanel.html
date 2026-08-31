@@ -116,40 +116,60 @@
         if (chrome.runtime.lastError) window.open(url, "_blank");
       });
     });
-    // sidepanel: open as floating panel (close sidepanel -> show overlay)
-    document.getElementById('btnFloat')?.addEventListener('click', async () => {
-      chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }, (res) => {
-        if (chrome.runtime.lastError) {
-          (async () => {
-            try {
-              const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-              if (tab && tab.id) try { await chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING" }); } catch {}
-            } catch {}
-          })();
-        }
-      });
-      // try to close sidepanel
-      try { window.close(); } catch {}
-      try { if (chrome.sidePanel) await chrome.sidePanel.setOptions({ enabled: false }); setTimeout(()=>{ try{ chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); }catch{} }, 600); } catch {}
-      // fallback window if content injection fails (handled in bg, but also try here after delay)
-      setTimeout(async () => {
-        try { const url = chrome.runtime.getURL("popup.html"); await chrome.windows.create({ url, type: "popup", width: 420, height: 640 }); } catch {}
-      }, 800);
-    });
-    // sidepanel: close and revert to floating
-    document.getElementById('btnClosePanel')?.addEventListener('click', async () => {
-      chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }, () => {
-        if (chrome.runtime.lastError) {}
-      });
-      try { window.close(); } catch {}
-      try { if (chrome.sidePanel) await chrome.sidePanel.setOptions({ enabled: false }); setTimeout(()=>{ try{ chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); }catch{} }, 600); } catch {}
-      chrome.runtime.sendMessage({ type: "CLOSE_SIDEPANEL" });
-      // also directly try
+    // sidepanel: open as floating panel (close sidepanel -> show overlay) - robust close
+    async function closeSidePanelRobust() {
+      // 1) 先確保浮動面板已在當前 tab 顯示，避免關閉後無內容
+      try { chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }); } catch {}
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab && tab.id) try { await chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING" }); } catch {}
       } catch {}
+      // 2) 多重嘗試關閉側邊欄
+      let closed = false;
+      try { window.close(); closed = true; } catch {}
+      try {
+        const win = await chrome.windows.getCurrent();
+        const wid = win && win.id;
+        if (chrome.sidePanel) {
+          // 優先嘗試 close API（若存在）
+          if (typeof chrome.sidePanel.close === "function") {
+            try { await chrome.sidePanel.close({ windowId: wid }); closed = true; } catch {}
+          }
+          // 再嘗試 disable
+          try { await chrome.sidePanel.setOptions({ enabled: false, windowId: wid }); closed = true; } catch {}
+          try { await chrome.sidePanel.setOptions({ enabled: false }); closed = true; } catch {}
+          // 500ms 後恢復啟用，供下次開啟
+          setTimeout(() => {
+            try { chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html", windowId: wid }); } catch {}
+            try { chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); } catch {}
+          }, 700);
+        }
+      } catch {}
+      try { chrome.runtime.sendMessage({ type: "CLOSE_SIDEPANEL_ROBUST" }); } catch {}
+      // 3) 備援：若仍未關閉，提示手動關閉並改用浮動視窗
+      setTimeout(() => {
+        // 檢查是否仍在側邊欄（visible），若是則彈浮動視窗作為替代
+        if (!closed && document.visibilityState === "visible") {
+          // 不自動彈窗，避免騷擾，僅提示
+          const t = document.getElementById("toast");
+          if (t) { t.textContent = "若側邊欄未自動關閉，請點擊側邊欄右上角 X，或改用懸浮面板"; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 2500); }
+        }
+      }, 900);
+    }
+    document.getElementById('btnFloat')?.addEventListener('click', async () => {
+      await closeSidePanelRobust();
+      // 額外備援：若內容腳本未注入，開浮動視窗
+      setTimeout(async () => {
+        try {
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          // 檢查是否已有浮動（透過 storage 判斷簡單用 timeout）
+          const url = chrome.runtime.getURL("popup.html");
+          // 僅在需要時才開視窗，避免重複
+          // 這裡不自動開，交由 closeSidePanelRobust 內的 SHOW_FLOATING 處理
+        } catch {}
+      }, 800);
     });
+    document.getElementById('btnClosePanel')?.addEventListener('click', closeSidePanelRobust);
   </script>
 </body>
 </html>
