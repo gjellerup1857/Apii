@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-08-31
+
+### Changed
+- 更換全新 Logo：伺服器白框圓角 + 藍紅指示，上層藍左紅右、下層紅左藍右，黑色背景圓角外框（透明圓角），已生成 16/32/48/64/128/256/512/1024 全尺寸，`manifest.json` 同步更新 `icons` 與 `action.default_icon`
+
 ## [1.0.2] - 2026-08-31
 
 ### Added

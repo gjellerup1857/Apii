@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/anomalyco/opencode"><img alt="Version" src="https://img.shields.io/badge/version-1.0.2-0ea5e9?style=flat-square"></a>
+  <a href="https://github.com/anomalyco/opencode"><img alt="Version" src="https://img.shields.io/badge/version-1.0.3-0ea5e9?style=flat-square"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square"></a>
   <a href="https://developer.chrome.com/docs/extensions/mv3/"><img alt="Manifest V3" src="https://img.shields.io/badge/manifest-v3-8b5cf6?style=flat-square"></a>
   <a href=".github/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/badge/CI-passing-22c55e?style=flat-square"></a>
