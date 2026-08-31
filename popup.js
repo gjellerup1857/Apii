@@ -24,6 +24,14 @@ const btnClearSearch = document.getElementById("btnClearSearch");
 const enableToggle = document.getElementById("enableToggle");
 const subtitle = document.getElementById("subtitle");
 
+// 若在懸浮 iframe 中，讓 CSS 改為 100% 自適應（而非 720px 固定）
+try {
+  if (window.self !== window.top) {
+    document.documentElement.classList.add("in-floating");
+    document.body.classList.add("in-floating");
+  }
+} catch {}
+
 function isVisibleLog(log) {
   if (!onlyCurrentTab) return (log.frameId === 0 || log.frameId === undefined);
   if (currentTabId === null) return (log.frameId === 0 || log.frameId === undefined);
