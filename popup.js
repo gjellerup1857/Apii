@@ -4,6 +4,8 @@ let searchQuery = "";
 let domainFilter = "";
 let methodFilter = "";
 let selectedId = null;
+let currentTabId = null;
+let onlyCurrentTab = true; // 與 DevTools 對齊：僅當前分頁主框架
 
 const listEl = document.getElementById("list");
 const emptyEl = document.getElementById("empty");
@@ -19,20 +21,73 @@ const btnClearSearch = document.getElementById("btnClearSearch");
 const enableToggle = document.getElementById("enableToggle");
 const subtitle = document.getElementById("subtitle");
 
+function isVisibleLog(log) {
+  if (!onlyCurrentTab) return (log.frameId === 0 || log.frameId === undefined);
+  if (currentTabId === null) return (log.frameId === 0 || log.frameId === undefined);
+  return log.tabId === currentTabId && (log.frameId === 0 || log.frameId === undefined);
+}
+function getVisibleLogs() {
+  return allLogs.filter(isVisibleLog);
+}
+
+async function resolveCurrentTabId() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs && tabs[0]) {
+      // 若當前是擴充分頁本身（fullpage/popup 內的 tabs.query 可能取到自己），嘗試找上一個非擴充頁
+      const isExt = tabs[0].url && tabs[0].url.startsWith("chrome-extension://");
+      if (isExt) {
+        const all = await chrome.tabs.query({ currentWindow: true });
+        const target = all.find(t => t.url && !t.url.startsWith("chrome-extension://") && !t.url.startsWith("chrome://"));
+        if (target) currentTabId = target.id;
+        else currentTabId = tabs[0].id;
+      } else {
+        currentTabId = tabs[0].id;
+      }
+    }
+  } catch {}
+}
+
 function init() {
-  loadLogs();
+  resolveCurrentTabId().then(() => {
+    loadLogs();
+    refresh();
+  });
   bindEvents();
+  // 監聽當前分頁切換
+  try {
+    chrome.tabs.onActivated.addListener(async () => {
+      await resolveCurrentTabId();
+      refresh();
+    });
+  } catch {}
   // Listen for new logs in real time
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "NEW_LOG") {
       allLogs.push(msg.data);
-      refresh();
+      // 僅當前分頁主框架才即時刷新，避免其他分頁噪音
+      if (isVisibleLog(msg.data)) refresh();
+      else {
+        // 仍更新徽章等，但列表不抖動
+        updateSubtitle();
+      }
     } else if (msg.type === "LOGS_CLEARED") {
       allLogs = [];
       refresh();
     } else if (msg.type === "LOGS_UPDATED") {
       allLogs = msg.data || [];
       refresh();
+    } else if (msg.type === "LOGS_CLEARED_FOR_TAB") {
+      const tid = msg.data && msg.data.tabId;
+      if (tid !== undefined && tid === currentTabId) {
+        // 當前分頁被導航清空
+        refresh();
+      } else if (tid === undefined) {
+        refresh();
+      } else {
+        // 其他分頁清空，僅更新統計
+        updateSubtitle();
+      }
     } else if (msg.type === "ENABLED_CHANGED") {
       enableToggle.checked = !!msg.data;
       updateSubtitle();
@@ -132,9 +187,15 @@ function bindEvents() {
     setTimeout(() => { try { chrome.runtime.sendMessage({ type: "OPEN_FULLPAGE" }); } catch {} }, 400);
   });
   document.getElementById("btnClear").addEventListener("click", () => {
-    if (allLogs.length === 0) return;
-    chrome.runtime.sendMessage({ type: "CLEAR_LOGS" }, () => {
-      allLogs = [];
+    const visible = getVisibleLogs();
+    if (visible.length === 0) return;
+    const msg = onlyCurrentTab && currentTabId !== null ? { type: "CLEAR_LOGS_FOR_TAB", tabId: currentTabId } : { type: "CLEAR_LOGS" };
+    chrome.runtime.sendMessage(msg, () => {
+      if (onlyCurrentTab && currentTabId !== null) {
+        allLogs = allLogs.filter(l => !(l.tabId === currentTabId && (l.frameId === 0 || l.frameId === undefined)));
+      } else {
+        allLogs = [];
+      }
       refresh();
     });
   });
@@ -142,7 +203,7 @@ function bindEvents() {
   document.getElementById("btnBack").addEventListener("click", closeDrawer);
   document.getElementById("btnCopyCurl").addEventListener("click", copyCurl);
   document.getElementById("btnHelp").addEventListener("click", () => {
-    alert("使用方式：\n1. 開啟開關後，重新整理目標網頁\n2. 在網頁操作觸發 API，擴充功能會自動記錄\n3. 點擊卡片查看請求參數與回應\n4. 點擊右上角「展開」可在獨立標籤頁查看，方便加入側邊欄\n5. 側邊欄按鈕可在 360px 窄版下正常使用（已做 RWD）");
+    alert("使用方式：\n1. 開啟開關後，重新整理目標網頁（導航自動清空，僅保留當前分頁主框架，與 DevTools 對齊）\n2. 在網頁操作觸發 API，擴充功能會自動記錄\n3. 點擊卡片查看請求參數與回應\n4. 點擊右上角「展開」可在獨立標籤頁查看，方便加入側邊欄\n5. 側邊欄按鈕可在 360px 窄版下正常使用（已做 RWD）\n6. 當前僅顯示 tab " + currentTabId + " 的主框架請求");
   });
 
   enableToggle.addEventListener("change", () => {
@@ -175,12 +236,15 @@ function bindEvents() {
 
 function updateSubtitle() {
   const enabled = enableToggle.checked;
-  subtitle.innerHTML = `${enabled ? "監控中" : "已暫停"} • <span id="count">${filteredLogs().length}</span> 條`;
+  const visibleCount = filteredLogs().length;
+  const tabInfo = currentTabId !== null ? ` • tab ${currentTabId} 主框架` : "";
+  subtitle.innerHTML = `${enabled ? "監控中" : "已暫停"} • <span id="count">${visibleCount}</span> 條${tabInfo}`;
   // badge title update handled in background
 }
 
 function filteredLogs() {
-  let logs = [...allLogs].reverse(); // newest first
+  // 先以當前分頁主框架過濾，再套其他篩選，與 DevTools 對齊
+  let logs = [...getVisibleLogs()].reverse(); // newest first
   if (filterType === "fetch") logs = logs.filter(l => l.type === "fetch");
   else if (filterType === "xhr") logs = logs.filter(l => l.type === "xhr");
   else if (filterType === "error") logs = logs.filter(l => l.status >= 400 || l.status === 0);
@@ -199,19 +263,17 @@ function filteredLogs() {
 
 function refresh() {
   const logs = filteredLogs();
-  // stats on allLogs (not filtered? show total) - but filtered count for subtitle
-  const total = allLogs.length;
-  countEl.textContent = logs.length;
-  // subtitle via function
+  const visible = getVisibleLogs();
+  // stats 與列表皆以可見（當前分頁主框架）為準，與 DevTools 對齊
+  if (countEl) countEl.textContent = logs.length;
   updateSubtitle();
-  // fix subtitle count element we just set? we overwrote innerHTML so need re-get
-  // Instead just update countEl again after
-  document.getElementById("count").textContent = logs.length;
+  const countNode = document.getElementById("count");
+  if (countNode) countNode.textContent = logs.length;
 
-  statOk.textContent = allLogs.filter(l => l.status >=200 && l.status <300).length;
-  statErr.textContent = allLogs.filter(l => l.status >=400 || l.status===0).length;
-  statFetch.textContent = allLogs.filter(l => l.type==="fetch").length;
-  statXhr.textContent = allLogs.filter(l => l.type==="xhr").length;
+  statOk.textContent = visible.filter(l => l.status >=200 && l.status <300).length;
+  statErr.textContent = visible.filter(l => l.status >=400 || l.status===0).length;
+  statFetch.textContent = visible.filter(l => l.type==="fetch").length;
+  statXhr.textContent = visible.filter(l => l.type==="xhr").length;
 
   updateDomainOptions();
   renderList(logs);
@@ -220,9 +282,14 @@ function refresh() {
   if (logs.length === 0) {
     emptyEl.style.display = "flex";
     listEl.style.display = "none";
-    if (allLogs.length === 0) {
+    const hasVisible = visible.length === 0;
+    const hasAny = allLogs.length === 0;
+    if (hasAny) {
       emptyEl.querySelector(".empty-title").textContent = "尚未擷取到任何請求";
       emptyEl.querySelector(".empty-desc").textContent = "在網頁中觸發 API（切換頁面、點擊按鈕、送出表單）後，這裡會即時顯示請求參數與回應內容。";
+    } else if (hasVisible) {
+      emptyEl.querySelector(".empty-title").textContent = "當前分頁主框架尚無請求";
+      emptyEl.querySelector(".empty-desc").textContent = `已自動過濾僅顯示 tab ${currentTabId} 的主框架請求（共 ${allLogs.length} 筆在其他分頁/iframe，已隱藏）• 導航後自動清空，與 DevTools 對齊。`;
     } else {
       emptyEl.querySelector(".empty-title").textContent = "沒有符合條件的記錄";
       emptyEl.querySelector(".empty-desc").textContent = "試試調整搜尋關鍵字或篩選條件。";
@@ -234,7 +301,8 @@ function refresh() {
 }
 
 function updateDomainOptions() {
-  const domains = [...new Set(allLogs.map(l => l.domain).filter(Boolean))].sort();
+  const visible = getVisibleLogs();
+  const domains = [...new Set(visible.map(l => l.domain).filter(Boolean))].sort();
   const current = domainSelect.value;
   domainSelect.innerHTML = '<option value="">全部網域</option>';
   domains.forEach(d => {
@@ -469,12 +537,14 @@ function renderJsonBlock(jsonStr) {
 function escapeAttr(s) { return String(s||"").replace(/"/g, "&quot;").replace(/\n/g, "&#10;"); }
 
 function exportLogs() {
-  const data = JSON.stringify(allLogs, null, 2);
+  // 匯出僅當前分頁主框架，與畫面一致
+  const toExport = onlyCurrentTab ? getVisibleLogs() : allLogs;
+  const data = JSON.stringify(toExport, null, 2);
   const blob = new Blob([data], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `api-inspector-${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.json`;
+  a.download = `api-inspector-tab${currentTabId || "all"}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

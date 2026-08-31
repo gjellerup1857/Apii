@@ -5,6 +5,8 @@ let domainFilter = "";
 let methodFilter = "";
 let selectedId = null;
 let autoScroll = true;
+let currentTabId = null;
+let onlyCurrentTab = true;
 
 const listEl = document.getElementById("list");
 const emptyEl = document.getElementById("empty");
@@ -18,26 +20,106 @@ const methodSelect = document.getElementById("methodSelect");
 const searchInput = document.getElementById("searchInput");
 const btnClearSearch = document.getElementById("btnClearSearch");
 const enableToggle = document.getElementById("enableToggle");
+const tabSelect = document.getElementById("tabSelect");
+
+function isVisibleLog(log) {
+  if (!onlyCurrentTab) return (log.frameId === 0 || log.frameId === undefined);
+  if (currentTabId === null) return (log.frameId === 0 || log.frameId === undefined);
+  return log.tabId === currentTabId && (log.frameId === 0 || log.frameId === undefined);
+}
+function getVisibleLogs() { return allLogs.filter(isVisibleLog); }
+
+async function resolveCurrentTabId() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs && tabs[0]) {
+      const isExt = tabs[0].url && tabs[0].url.startsWith("chrome-extension://");
+      if (isExt) {
+        // fullpage 本身是擴充頁，需找最近有日誌的非擴充 tab
+        const tabIds = [...new Set(allLogs.map(l => l.tabId).filter(Boolean))];
+        if (tabIds.length) {
+          // 取最新 log 的 tab
+          const latest = [...allLogs].reverse().find(l => l.tabId && (l.frameId===0||l.frameId===undefined));
+          if (latest) { currentTabId = latest.tabId; return; }
+        }
+        const all = await chrome.tabs.query({ currentWindow: true });
+        const target = all.find(t => t.url && !t.url.startsWith("chrome-extension://") && !t.url.startsWith("chrome://"));
+        if (target) currentTabId = target.id;
+        else currentTabId = tabs[0].id;
+      } else {
+        currentTabId = tabs[0].id;
+      }
+    }
+  } catch {}
+  // 若仍無，從最新日誌推斷
+  if (currentTabId === null && allLogs.length) {
+    const latest = [...allLogs].reverse().find(l => l.tabId && (l.frameId===0||l.frameId===undefined));
+    if (latest) currentTabId = latest.tabId;
+  }
+}
+function updateTabSelector() {
+  if (!tabSelect) return;
+  const tabIds = [...new Set(allLogs.map(l => l.tabId).filter(Boolean))].sort((a,b)=>a-b);
+  const current = tabSelect.value;
+  tabSelect.innerHTML = '<option value="">全部主框架</option>';
+  tabIds.forEach(tid => {
+    const opt = document.createElement("option");
+    opt.value = tid;
+    const count = allLogs.filter(l => l.tabId===tid && (l.frameId===0||l.frameId===undefined)).length;
+    const sample = allLogs.find(l => l.tabId===tid);
+    const title = sample && sample.tabUrl ? (new URL(sample.tabUrl).hostname || sample.tabUrl) : `tab ${tid}`;
+    opt.textContent = `tab ${tid} • ${title} (${count})`;
+    if (String(tid) === String(current) || tid === currentTabId) opt.selected = true;
+    tabSelect.appendChild(opt);
+  });
+  // 若 onlyCurrentTab 且當前無選中，預設選 currentTabId
+  if (onlyCurrentTab && currentTabId !== null) {
+    tabSelect.value = String(currentTabId);
+  }
+}
 
 // Init
 function init() {
-  loadLogs();
+  resolveCurrentTabId().then(() => {
+    loadLogs();
+    refresh();
+  });
   bindEvents();
+  try {
+    chrome.tabs.onActivated.addListener(async () => {
+      await resolveCurrentTabId();
+      refresh();
+      updateTabSelector();
+    });
+  } catch {}
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "NEW_LOG") {
       allLogs.push(msg.data);
-      refresh();
-      if (autoScroll && isMobile()) {
-        // scroll list to top where newest is
-        listEl.scrollTop = 0;
+      updateTabSelector();
+      if (isVisibleLog(msg.data)) {
+        refresh();
+        if (autoScroll && isMobile()) listEl.scrollTop = 0;
       }
     } else if (msg.type === "LOGS_CLEARED") {
       allLogs = [];
       selectedId = null;
       showEmptyDetail();
+      updateTabSelector();
       refresh();
+    } else if (msg.type === "LOGS_CLEARED_FOR_TAB") {
+      const tid = msg.data && msg.data.tabId;
+      if (tid === currentTabId) {
+        refresh();
+        updateTabSelector();
+        if (selectedId && !allLogs.find(l => l.id===selectedId && isVisibleLog(l))) {
+          selectedId = null; showEmptyDetail();
+        }
+      } else {
+        updateTabSelector();
+      }
     } else if (msg.type === "LOGS_UPDATED") {
       allLogs = msg.data || [];
+      updateTabSelector();
       refresh();
     } else if (msg.type === "ENABLED_CHANGED") {
       enableToggle.checked = !!msg.data;
@@ -46,6 +128,7 @@ function init() {
   chrome.storage.onChanged.addListener((c) => {
     if (c.apiInspectorLogs) {
       allLogs = c.apiInspectorLogs.newValue || [];
+      updateTabSelector();
       refresh();
     }
     if (c.apiInspectorEnabled) enableToggle.checked = !!c.apiInspectorEnabled.newValue;
@@ -70,14 +153,33 @@ function loadLogs() {
 
 function bindEvents() {
   document.getElementById("btnClear")?.addEventListener("click", () => {
-    if (!allLogs.length) return;
-    if (!confirm("確定要清空所有記錄？")) return;
-    chrome.runtime.sendMessage({ type: "CLEAR_LOGS" }, () => {
-      allLogs = []; selectedId = null; showEmptyDetail(); refresh();
+    const visible = getVisibleLogs();
+    if (!visible.length) return;
+    if (!confirm(onlyCurrentTab && currentTabId !== null ? `確定要清空 tab ${currentTabId} 的 ${visible.length} 筆記錄？` : "確定要清空所有記錄？")) return;
+    const msg = onlyCurrentTab && currentTabId !== null ? { type: "CLEAR_LOGS_FOR_TAB", tabId: currentTabId } : { type: "CLEAR_LOGS" };
+    chrome.runtime.sendMessage(msg, () => {
+      if (onlyCurrentTab && currentTabId !== null) {
+        allLogs = allLogs.filter(l => !(l.tabId === currentTabId && (l.frameId===0||l.frameId===undefined)));
+      } else {
+        allLogs = [];
+      }
+      selectedId = null; showEmptyDetail(); updateTabSelector(); refresh();
       toast("已清空");
     });
   });
   document.getElementById("btnExport")?.addEventListener("click", exportLogs);
+  tabSelect?.addEventListener("change", () => {
+    const v = tabSelect.value;
+    if (v === "") {
+      onlyCurrentTab = false;
+      currentTabId = null;
+    } else {
+      onlyCurrentTab = true;
+      currentTabId = Number(v);
+    }
+    selectedId = null; showEmptyDetail();
+    refresh();
+  });
   document.getElementById("btnSidePanel")?.addEventListener("click", async () => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -133,7 +235,7 @@ function bindEvents() {
 function isMobile() { return window.innerWidth <= 768; }
 
 function filteredLogs() {
-  let logs = [...allLogs].reverse();
+  let logs = [...getVisibleLogs()].reverse();
   if (filterType === "fetch") logs = logs.filter(l=>l.type==="fetch");
   else if (filterType==="xhr") logs = logs.filter(l=>l.type==="xhr");
   else if (filterType==="error") logs = logs.filter(l=>l.status>=400||l.status===0);
@@ -151,11 +253,13 @@ function filteredLogs() {
 
 function refresh() {
   const logs = filteredLogs();
-  badgeEl.textContent = `${allLogs.length} 條記錄 • 顯示 ${logs.length}`;
-  document.getElementById("statOk").textContent = allLogs.filter(l=>l.status>=200&&l.status<300).length;
-  document.getElementById("statErr").textContent = allLogs.filter(l=>l.status>=400||l.status===0).length;
-  document.getElementById("statFetch").textContent = allLogs.filter(l=>l.type==="fetch").length;
-  document.getElementById("statXhr").textContent = allLogs.filter(l=>l.type==="xhr").length;
+  const visible = getVisibleLogs();
+  const tabLabel = onlyCurrentTab && currentTabId !== null ? `tab ${currentTabId} 主框架` : "全部主框架";
+  badgeEl.textContent = `${visible.length} 條 • 顯示 ${logs.length} • ${tabLabel}`;
+  document.getElementById("statOk").textContent = visible.filter(l=>l.status>=200&&l.status<300).length;
+  document.getElementById("statErr").textContent = visible.filter(l=>l.status>=400||l.status===0).length;
+  document.getElementById("statFetch").textContent = visible.filter(l=>l.type==="fetch").length;
+  document.getElementById("statXhr").textContent = visible.filter(l=>l.type==="xhr").length;
 
   updateDomainOptions();
   renderList(logs);
@@ -165,12 +269,21 @@ function refresh() {
     listEl.style.display="none";
     if (allLogs.length===0) {
       emptyEl.querySelector(".empty-title").textContent="尚未擷取到任何請求";
+      emptyEl.querySelector(".empty-desc").textContent="在其他分頁操作網頁後，切回此頁即可看到記錄。支援 Fetch / XHR，包含請求參數與完整回應。";
+    } else if (visible.length===0) {
+      emptyEl.querySelector(".empty-title").textContent=`當前 ${tabLabel} 尚無請求`;
+      emptyEl.querySelector(".empty-desc").textContent=`共 ${allLogs.length} 筆在其他分頁/iframe（已過濾），導航後自動清空，與 DevTools 對齊。可切換上方分頁選擇器查看。`;
+      const steps = emptyEl.querySelector(".empty-steps");
+      if (steps) steps.style.display="none";
     } else {
       emptyEl.querySelector(".empty-title").textContent="沒有符合條件的記錄";
+      emptyEl.querySelector(".empty-desc").textContent="試試調整搜尋關鍵字或篩選條件。";
     }
   } else {
     emptyEl.style.display="none";
     listEl.style.display="flex";
+    const steps = emptyEl.querySelector(".empty-steps");
+    if (steps) steps.style.display="";
   }
 
   // if selectedId not in filtered, clear selection? Keep but highlight may not show
@@ -184,7 +297,8 @@ function refresh() {
 }
 
 function updateDomainOptions(){
-  const domains = [...new Set(allLogs.map(l=>l.domain).filter(Boolean))].sort();
+  const visible = getVisibleLogs();
+  const domains = [...new Set(visible.map(l=>l.domain).filter(Boolean))].sort();
   const cur = domainSelect.value;
   domainSelect.innerHTML='<option value="">全部網域</option>';
   domains.forEach(d=>{
@@ -447,12 +561,13 @@ function copyCurl(){
   copyText(curl, null);
 }
 function exportLogs(){
-  const data=JSON.stringify(allLogs,null,2);
+  const toExport = onlyCurrentTab ? getVisibleLogs() : allLogs;
+  const data=JSON.stringify(toExport,null,2);
   const blob=new Blob([data],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url; a.download=`api-inspector-${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.json`;
-  a.click(); URL.revokeObjectURL(url); toast("已匯出 JSON");
+  a.href=url; a.download=`api-inspector-tab${currentTabId||"all"}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.json`;
+  a.click(); URL.revokeObjectURL(url); toast(`已匯出 ${toExport.length} 筆`);
 }
 function toast(msg){
   const t=document.getElementById("toast");

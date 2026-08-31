@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-08-31
+
+### Changed
+- 與 DevTools 對齊：僅顯示當前分頁主框架（`frameId===0`），`manifest` 改 `all_frames:false`，`background` 僅收主框架
+- 導航自動清空：`tabs.onUpdated` / `webNavigation.onCommitted` 按 `tabId` 清除該分頁舊日誌，新增 `CLEAR_LOGS_FOR_TAB`
+- UI 僅顯示 `tabId` 匹配當前分頁：`popup`/`sidepanel`/`floating` 自動解析 `currentTabId`，`fullpage` 新增 `tabSelect` 下拉（全部/單一 tab），統計與匯出皆以可見為準
+
 ## [1.0.4] - 2026-08-31
 
 ### Fixed

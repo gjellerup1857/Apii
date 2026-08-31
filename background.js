@@ -33,16 +33,23 @@ function broadcast(type, data) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const tabId = sender.tab ? sender.tab.id : null;
   const tabUrl = sender.tab ? sender.tab.url : null;
+  const frameId = sender.frameId !== undefined ? sender.frameId : 0;
 
   if (msg.type === "API_LOG") {
     if (!enabled) {
       sendResponse({ ok: true, ignored: true });
       return true;
     }
+    // 僅保留主框架，避免 iframe 大量噪音與 DevTools 對齊
+    if (frameId !== 0) {
+      sendResponse({ ok: true, ignored: true, reason: "not_main_frame" });
+      return true;
+    }
     const payload = msg.payload;
     // Add tab info
     payload.tabId = tabId;
     payload.tabUrl = tabUrl || payload.pageUrl || "";
+    payload.frameId = frameId;
     payload.id = payload.id || Math.random().toString(36).slice(2);
     // Avoid huge objects exceeding storage quota - truncate responseBody if needed
     // Already truncated in injected, but ensure storage size
@@ -51,6 +58,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     persist();
     // Notify listeners
     broadcast("NEW_LOG", payload);
+    updateBadgeForTab(tabId);
     sendResponse({ ok: true });
     return true;
   }
@@ -64,14 +72,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     logs = [];
     chrome.storage.local.remove(STORAGE_KEY).catch(() => {});
     broadcast("LOGS_CLEARED", null);
+    updateBadge();
+    // 同時清除所有分頁的獨立 badge
+    chrome.tabs.query({}).then(tabs => tabs.forEach(t => updateBadgeForTab(t.id))).catch(()=>{});
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  if (msg.type === "CLEAR_LOGS_FOR_TAB") {
+    const tid = msg.tabId;
+    if (tid !== undefined && tid !== null) {
+      const before = logs.length;
+      logs = logs.filter(l => l.tabId !== tid);
+      if (logs.length !== before) {
+        if (logs.length === 0) chrome.storage.local.remove(STORAGE_KEY).catch(() => {});
+        else persist();
+        broadcast("LOGS_CLEARED_FOR_TAB", { tabId: tid });
+        broadcast("LOGS_UPDATED", logs);
+        updateBadgeForTab(tid);
+      }
+    } else {
+      logs = [];
+      chrome.storage.local.remove(STORAGE_KEY).catch(() => {});
+      broadcast("LOGS_CLEARED", null);
+      updateBadge();
+    }
     sendResponse({ ok: true });
     return true;
   }
 
   if (msg.type === "DELETE_LOG") {
+    const target = logs.find(l => l.id === msg.id);
+    const tid = target ? target.tabId : null;
     logs = logs.filter(l => l.id !== msg.id);
     persist();
     broadcast("LOGS_UPDATED", logs);
+    if (tid !== null) updateBadgeForTab(tid);
+    else updateBadge();
     sendResponse({ ok: true });
     return true;
   }
@@ -211,6 +248,50 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+// 導航自動清空（按 tabId，僅主框架）：與 DevTools 對齊，跳轉後不保留舊日誌
+function clearLogsForTab(tabId, reason) {
+  if (tabId === undefined || tabId === null) return;
+  const before = logs.length;
+  logs = logs.filter(l => l.tabId !== tabId);
+  if (logs.length !== before) {
+    persist();
+    // 通知所有 UI 更新
+    broadcast("LOGS_UPDATED", logs);
+    broadcast("LOGS_CLEARED_FOR_TAB", { tabId, reason });
+    updateBadgeForTab(tabId);
+  }
+}
+
+try {
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    // url 變更代表導航開始（包含同頁 hash 除外，changeInfo.url 僅在主框架導航時出現）
+    if (changeInfo.url) {
+      clearLogsForTab(tabId, "tabsUpdated");
+    }
+  });
+} catch {}
+try {
+  if (chrome.webNavigation) {
+    chrome.webNavigation.onCommitted.addListener((details) => {
+      if (details.frameId === 0) {
+        clearLogsForTab(details.tabId, "webNavCommitted");
+      }
+    });
+    // 前進/重整等
+    chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+      if (details.frameId === 0) {
+        // 可選：導航前即清，避免舊日誌閃現
+        // clearLogsForTab(details.tabId, "beforeNavigate");
+      }
+    });
+  }
+} catch {}
+try {
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    clearLogsForTab(tabId, "tabRemoved");
+  });
+} catch {}
+
 // Handle sidePanel behavior on action click if needed
 // Allow sidePanel to be opened via clicking action when configured
 if (chrome.sidePanel) {
@@ -219,17 +300,40 @@ if (chrome.sidePanel) {
 
 // Optional: clear logs on extension install/update? keep them
 
-// Badge to show count
+// Badge 僅顯示當前活躍分頁的主框架數量，與 DevTools 對齊（按 tabId）
+async function updateBadgeForTab(tabId) {
+  try {
+    const count = logs.filter(l => l.tabId === tabId && (l.frameId === 0 || l.frameId === undefined)).length;
+    const text = count > 0 ? (count > 999 ? "999+" : String(count)) : "";
+    if (tabId !== null && tabId !== undefined) {
+      await chrome.action.setBadgeText({ text, tabId });
+      await chrome.action.setBadgeBackgroundColor({ color: enabled ? "#0ea5e9" : "#94a3b8", tabId });
+    } else {
+      await chrome.action.setBadgeText({ text });
+      await chrome.action.setBadgeBackgroundColor({ color: enabled ? "#0ea5e9" : "#94a3b8" });
+    }
+  } catch {}
+}
 function updateBadge() {
-  const count = logs.length;
+  // 全局兜底：顯示總主框架數
+  const count = logs.filter(l => l.frameId === 0 || l.frameId === undefined).length;
   const text = count > 0 ? (count > 999 ? "999+" : String(count)) : "";
   chrome.action.setBadgeText({ text });
   chrome.action.setBadgeBackgroundColor({ color: enabled ? "#0ea5e9" : "#94a3b8" });
-  // also set title
-  chrome.action.setTitle({ title: `API Inspector ${enabled ? "(已啟用)" : "(已暫停)"} - ${count} 條記錄` });
+  chrome.action.setTitle({ title: `API Inspector ${enabled ? "(已啟用)" : "(已暫停)"} - ${count} 條主框架記錄（僅當前分頁顯示）` });
+  // 同步更新活躍分頁的獨立 badge
+  chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+    if (tabs[0]) updateBadgeForTab(tabs[0].id);
+  }).catch(() => {});
 }
+try {
+  chrome.tabs.onActivated.addListener(activeInfo => updateBadgeForTab(activeInfo.tabId));
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.status === "complete" || changeInfo.url) updateBadgeForTab(tabId);
+  });
+} catch {}
 
 // Periodically update badge or on storage change
-setInterval(updateBadge, 1000);
+setInterval(updateBadge, 1500);
 chrome.storage.onChanged.addListener(() => updateBadge());
 chrome.runtime.onStartup.addListener(updateBadge);
