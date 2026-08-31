@@ -225,6 +225,29 @@ function bindEvents() {
     }
     toast("請手動點擊擴充功能圖示右鍵 → 開啟側邊欄");
   });
+  document.getElementById("btnAddToSidebar")?.addEventListener("click", async () => {
+    const url = chrome.runtime.getURL("fullpage.html");
+    const fullUrl = location.href;
+    try {
+      // 1) 嘗試直接用 sidePanel 開啟（最可靠）
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (chrome.sidePanel && tab) {
+        await chrome.sidePanel.setOptions({ path: "fullpage.html", enabled: true });
+        await chrome.sidePanel.open({ windowId: tab.windowId });
+        toast("已在側邊欄開啟，可點側邊欄圖釘固定");
+        return;
+      }
+    } catch (e) { console.warn("sidePanel open failed", e); }
+    try {
+      // 2) 複製網址並指引手動加入 Brave 側邊欄
+      await navigator.clipboard.writeText(fullUrl || url);
+      toast("已複製網址：請到 Brave 側邊欄點 + 貼上即可常駐");
+    } catch {
+      prompt("請複製此網址並到 Brave 側邊欄點 + 新增：", fullUrl || url);
+    }
+    // 3) 備用：提示右鍵分頁加入
+    setTimeout(() => toast("或對分頁右鍵 → 加入側邊欄"), 1800);
+  });
   enableToggle?.addEventListener("change", () => {
     chrome.runtime.sendMessage({ type: "TOGGLE_ENABLED", enabled: enableToggle.checked });
     toast(enableToggle.checked ? "已啟用監控" : "已暫停監控");

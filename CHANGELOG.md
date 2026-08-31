@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-08-31
+
+### Added
+- 展開的新標籤頁可被加入 Brave 側邊欄：`fullpage.html` 新增「加入側邊欄」按鈕（`chrome.sidePanel.setOptions/open` + 複製網址備援），RWD 已適配 320px 窄版，提示可常駐
+
 ## [1.0.6] - 2026-08-31
 
 ### Changed
