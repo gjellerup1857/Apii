@@ -56,17 +56,17 @@
 ### 方式一：開發者載入（推薦）
 
 ```bash
-git clone https://github.com/gjellerup1857/brave-api-inspector.git
-cd brave-api-inspector
+git clone https://github.com/gjellerup1857/Apii.git
+cd Apii
 ```
 
 1. 開啟 `brave://extensions`（或 `chrome://extensions`）→ 右上開啟「開發者模式」
-2. 點「載入未封裝項目」→ 選擇 `brave-api-inspector` 資料夾
+2. 點「載入未封裝項目」→ 選擇 `Apii` 資料夾
 3. 重新整理任意網頁 → 點工具列 **Apii** 圖示
 
 ### 方式二：Release Zip
 
-1. 下載 GitHub Releases 的 `brave-api-inspector-v*.zip`
+1. 下載 GitHub Releases 的 `Apii-v*.zip`
 2. 解壓後同上「載入未封裝項目」
 
 ## 🚀 使用方式
@@ -87,7 +87,7 @@ cd brave-api-inspector
 ## 🧱 專案結構
 
 ```
-brave-api-inspector/
+Apii/
 ├─ manifest.json              # MV3, permissions: storage/tabs/sidePanel/activeTab/scripting
 ├─ background.js              # Service Worker：儲存、徽章、訊息路由
 ├─ content.js                 # ISOLATED：注入 injected.js，橋接 postMessage
@@ -115,7 +115,7 @@ node --check background.js && node --check content.js && node --check injected.j
 python3 -m json.tool manifest.json > /dev/null && echo "manifest ok"
 
 # 打包
-zip -r dist/brave-api-inspector.zip . -x "*.git*" "*.DS_Store" "dist/*" "*.zip"
+zip -r dist/Apii.zip . -x "*.git*" "*.DS_Store" "dist/*" "*.zip"
 ```
 
 更多請見 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) 與 [`CONTRIBUTING.md`](CONTRIBUTING.md)。

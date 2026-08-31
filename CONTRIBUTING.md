@@ -9,8 +9,8 @@
 - 無需編譯，純 Vanilla JS + Manifest V3
 
 ```bash
-git clone https://github.com/<your-username>/brave-api-inspector.git
-cd brave-api-inspector
+git clone https://github.com/<your-username>/Apii.git
+cd Apii
 # 用 Python 啟動測試頁
 python3 -m http.server 8000
 # 瀏覽器開啟 brave://extensions/ → 開發者模式 → 載入未封裝項目 → 選擇本資料夾

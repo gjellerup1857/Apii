@@ -10,12 +10,12 @@
 
 ```bash
 git clone <repo>
-cd brave-api-inspector
+cd Apii
 python3 -m http.server 8000
 # 開 http://localhost:8000/test.html
 ```
 
-1. `brave://extensions` → 開發者模式 → 載入未封裝項目 → 選 `brave-api-inspector/`
+1. `brave://extensions` → 開發者模式 → 載入未封裝項目 → 選 `Apii/`
 2. 改檔後點 `重新載入`（或用 `chrome.runtime.reload()`）
 3. 測試按鈕（`test.html`）：
    - Fetch GET / POST / Query / 404
@@ -45,7 +45,7 @@ python3 -m json.tool manifest.json > /dev/null && echo "manifest ok"
 
 ```bash
 # 更新 version 於 manifest.json 與 CHANGELOG.md
-zip -r dist/brave-api-inspector-v1.0.2.zip . -x "*.git*" "*.DS_Store" "dist/*" "*.zip"
+zip -r dist/Apii-v1.0.2.zip . -x "*.git*" "*.DS_Store" "dist/*" "*.zip"
 # 上傳到 GitHub Release（或 Chrome Web Store）
 git tag v1.0.2 && git push origin v1.0.2
 # GitHub Actions 會自動建置並發布 Release
@@ -61,7 +61,7 @@ git tag v1.0.2 && git push origin v1.0.2
 ## 目錄
 
 ```
-brave-api-inspector/
+Apii/
 ├─ manifest.json
 ├─ background.js
 ├─ content.js / injected.js
