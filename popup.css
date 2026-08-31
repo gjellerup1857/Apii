@@ -128,6 +128,36 @@ details[open] summary { margin-bottom:6px; }
   .detail-head { padding:6px 8px; }
 }
 
+/* 高度 RWD：初始拉長 240px 後，內容等比例擴展而非留白 */
+@media (min-height: 800px) {
+  .list { padding: 12px; gap: 12px; }
+  .empty { padding: 60px 24px; }
+  .empty-icon { font-size: 36px; }
+  .filters { padding: 12px 14px; }
+  .stats { padding: 10px 14px; }
+  .card-header { padding: 12px 14px; }
+  .card-meta { padding: 8px 14px 12px; }
+  .detail-section { margin-bottom: 2px; }
+  .json-view { max-height: 320px; }
+  .json-view.json-formatted { max-height: 400px; }
+  .drawer-content { padding: 16px; gap: 16px; }
+}
+@media (min-height: 900px) {
+  .list { padding: 16px; gap: 14px; }
+  .empty { padding: 80px 24px; }
+  .empty-desc { max-width: 360px; }
+  .filters { padding: 14px 16px; }
+  .header { padding: 14px 16px; }
+  .json-view { max-height: 400px; }
+  .json-view.json-formatted { max-height: 520px; }
+  .detail-body { padding: 12px; }
+}
+@media (min-height: 1000px) {
+  .list { gap: 16px; }
+  .card { border-radius: 12px; }
+  .card-header { padding: 14px 16px; }
+}
+
 /* 懸浮放大時的 RWD：面板被拖寬後，內容自動重排 */
 @media (min-width: 520px) {
   .filters { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
