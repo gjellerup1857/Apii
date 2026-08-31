@@ -56,7 +56,7 @@
 ### 方式一：開發者載入（推薦）
 
 ```bash
-git clone https://github.com/<your-username>/brave-api-inspector.git
+git clone https://github.com/gjellerup1857/brave-api-inspector.git
 cd brave-api-inspector
 ```
 
