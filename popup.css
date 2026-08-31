@@ -94,11 +94,19 @@ html, body { width: 380px; height: 600px; overflow: hidden; font-family: -apple-
 .kv:last-child { border:none; }
 .kv-key { color:#64748b; min-width:70px; max-width:40%; font-weight:500; overflow-wrap:anywhere; word-break:break-word; flex-shrink:0; }
 .kv-val { color:#0f172a; flex:1; min-width:0; overflow-wrap:anywhere; word-break:break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-width:100%; }
-.json-view { background:#0f172a; color:#e2e8f0; padding:10px; border-radius:6px; font-size:11px; line-height:1.5; overflow:auto; max-height:240px; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-width:100%; box-sizing:border-box; }
+.json-view { background:#0f172a; color:#e2e8f0; padding:10px; border-radius:6px; font-size:11px; line-height:1.5; overflow:auto; max-height:240px; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-width:100%; box-sizing:border-box; tab-size:2; }
+.json-view.json-formatted { background:#0f172a; border:1px solid #1e293b; color:#e2e8f0; padding:12px; border-radius:8px; font-size:11px; line-height:1.65; overflow:auto; max-height:280px; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-width:100%; box-sizing:border-box; tab-size:2; letter-spacing:0.2px; }
 .json-view::-webkit-scrollbar { width:6px; height:6px; }
+.json-view::-webkit-scrollbar-thumb { background:#334155; border-radius:999px; }
+.json-view.json-formatted::-webkit-scrollbar-thumb { background:#475569; }
 .copy-btn { font-size:11px; padding:3px 8px; border:1px solid #e2e8f0; background:white; border-radius:6px; cursor:pointer; flex-shrink:0; white-space:nowrap; }
 .copy-btn:hover { background:#f1f5f9; }
 .detail-url { font-size:11px; overflow-wrap:anywhere; word-break:break-word; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px; width:100%; max-width:100%; box-sizing:border-box; }
+.kv-json { flex-direction: column; align-items: stretch !important; }
+.kv-json .kv-key { max-width:100%; }
+.kv-json .json-view { margin-top:6px; }
+details summary { user-select:none; }
+details[open] summary { margin-bottom:6px; }
 .footer { padding:6px 12px; border-top:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#94a3b8; background:white; }
 .link-btn { width:20px; height:20px; border-radius:50%; border:1px solid #e2e8f0; background:white; cursor:pointer; font-size:11px; color:#64748b; }
 

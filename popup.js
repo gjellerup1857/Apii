@@ -351,7 +351,34 @@ function renderDetail(log) {
   function kvRows(obj) {
     const entries = Object.entries(obj || {});
     if (entries.length === 0) return '<div style="color:#94a3b8;font-size:11px;padding:6px 0;">（無）</div>';
-    return entries.map(([k,v]) => `<div class="kv"><span class="kv-key">${escapeHtml(k)}</span><span class="kv-val">${escapeHtml(typeof v==='object'?JSON.stringify(v):String(v))}</span></div>`).join("");
+    return entries.map(([k,v]) => {
+      let valStr;
+      if (v && typeof v === "object") {
+        try { valStr = JSON.stringify(v, null, 2); } catch { valStr = String(v); }
+      } else {
+        // 嘗試將字串值中的 JSON 格式化
+        const s = String(v).trim();
+        if ((s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"))) {
+          try { valStr = JSON.stringify(JSON.parse(s), null, 2); } catch { valStr = String(v); }
+        } else valStr = String(v);
+      }
+      // 若格式化後為多行 JSON，用 json-view 小塊顯示
+      if (valStr.includes("\n")) {
+        return `<div class="kv kv-json"><span class="kv-key">${escapeHtml(k)}</span><span class="kv-val"><pre class="json-view" style="margin:4px 0;max-height:160px;">${escapeHtml(valStr)}</pre></span></div>`;
+      }
+      return `<div class="kv"><span class="kv-key">${escapeHtml(k)}</span><span class="kv-val">${escapeHtml(valStr)}</span></div>`;
+    }).join("");
+  }
+
+  function jsonSection(obj) {
+    if (!obj || Object.keys(obj).length === 0) return "";
+    try {
+      const jsonStr = JSON.stringify(obj, null, 2);
+      if (jsonStr.length > 20) {
+        return `<details style="margin-top:8px;"><summary style="font-size:11px;color:#0ea5e9;cursor:pointer;">顯示為 JSON</summary>${renderJsonBlock(jsonStr)}</details>`;
+      }
+    } catch {}
+    return "";
   }
 
   const timeline = `${new Date(log.timestamp).toLocaleString("zh-TW")} • ${log.duration}ms • ${log.type.toUpperCase()}`;
@@ -368,30 +395,30 @@ function renderDetail(log) {
 
     <div class="detail-section">
       <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 查詢參數 <span class="count">${Object.keys(query).length} 個</span></div></div>
-      <div class="detail-body"><div class="detail-body-inner">${kvRows(query)}</div></div>
+      <div class="detail-body"><div class="detail-body-inner">${kvRows(query)}${jsonSection(query)}</div></div>
     </div>
 
     <div class="detail-section">
       <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 請求 Headers <span class="count">${Object.keys(reqHeaders).length} 個</span></div></div>
-      <div class="detail-body"><div class="detail-body-inner">${kvRows(reqHeaders)}</div></div>
+      <div class="detail-body"><div class="detail-body-inner">${kvRows(reqHeaders)}${jsonSection(reqHeaders)}</div></div>
     </div>
 
     <div class="detail-section">
-      <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 請求 Body <span class="count">${escapeHtml(log.requestBodyType||"empty")}</span></div><div class="head-actions"><button class="copy-btn" data-copy="${escapeAttr(reqBodyStr)}">複製</button></div></div>
+      <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 請求 Body <span class="count">${escapeHtml(log.requestBodyType||"empty")}</span></div><div class="head-actions"><button class="copy-btn" data-copy="${escapeAttr(reqBodyStr)}">複製 JSON</button></div></div>
       <div class="detail-body"><div class="detail-body-inner">
-        ${reqBodyStr ? `<pre class="json-view">${escapeHtml(reqBodyStr)}</pre>` : '<div style="color:#94a3b8;font-size:11px;">（無 Body）</div>'}
+        ${reqBodyStr ? (isJsonContent(log.requestBody, log.requestBodyType) ? renderJsonBlock(reqBodyStr) : `<pre class="json-view">${escapeHtml(reqBodyStr)}</pre>`) : '<div style="color:#94a3b8;font-size:11px;">（無 Body）</div>'}
       </div></div>
     </div>
 
     <div class="detail-section">
       <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 回應 Headers <span class="count">${Object.keys(resHeaders).length} 個</span></div></div>
-      <div class="detail-body"><div class="detail-body-inner">${kvRows(resHeaders)}</div></div>
+      <div class="detail-body"><div class="detail-body-inner">${kvRows(resHeaders)}${jsonSection(resHeaders)}</div></div>
     </div>
 
     <div class="detail-section">
-      <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 回應 Body <span class="count">${escapeHtml(log.responseBodyType||"")}</span></div><div class="head-actions"><button class="copy-btn" data-copy="${escapeAttr(resBodyStr)}">複製</button></div></div>
+      <div class="detail-head"><div class="detail-head-left"><span class="chevron">▼</span> 回應 Body <span class="count">${escapeHtml(log.responseBodyType||"")}</span></div><div class="head-actions"><button class="copy-btn" data-copy="${escapeAttr(resBodyStr)}">複製 JSON</button></div></div>
       <div class="detail-body"><div class="detail-body-inner">
-        ${resBodyStr ? `<pre class="json-view">${escapeHtml(resBodyStr)}</pre>` : '<div style="color:#94a3b8;font-size:11px;">（無內容）</div>'}
+        ${resBodyStr ? (isJsonContent(log.responseBody, log.responseBodyType) ? renderJsonBlock(resBodyStr) : `<pre class="json-view">${escapeHtml(resBodyStr)}</pre>`) : '<div style="color:#94a3b8;font-size:11px;">（無內容）</div>'}
       </div></div>
     </div>
   `;
@@ -399,11 +426,46 @@ function renderDetail(log) {
 
 function formatBody(body, type) {
   if (body === null || body === undefined) return "";
+  // 物件直接 pretty JSON
   if (typeof body === "object") {
     try { return JSON.stringify(body, null, 2); } catch { return String(body); }
   }
+  const str = String(body).trim();
+  if (!str) return "";
+  // 字串若為 JSON，自動格式化
+  if ((str.startsWith("{") && str.endsWith("}")) || (str.startsWith("[") && str.endsWith("]"))) {
+    try {
+      const parsed = JSON.parse(str);
+      return JSON.stringify(parsed, null, 2);
+    } catch {}
+  }
+  // 嘗試解析非嚴格 JSON（如單引號）失敗則回原字串
   return String(body);
 }
+
+function isJsonContent(body, type) {
+  if (type === "json") return true;
+  if (body && typeof body === "object") return true;
+  const s = String(body || "").trim();
+  if (!s) return false;
+  if ((s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"))) {
+    try { JSON.parse(s); return true; } catch {}
+  }
+  return false;
+}
+
+function renderJsonBlock(jsonStr) {
+  // 語法高亮：key 藍、字串綠、數字黃、布林紫、null 灰
+  const escaped = escapeHtml(jsonStr);
+  const highlighted = escaped
+    .replace(/(&quot;(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;\s*:)/g, '<span style="color:#93c5fd">$1</span>')
+    .replace(/:\s*(&quot;(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;)/g, ': <span style="color:#86efac">$1</span>')
+    .replace(/:\s*(-?\d+\.?\d*(e[+-]?\d+)?)/g, ': <span style="color:#fcd34d">$1</span>')
+    .replace(/:\s*(true|false)/g, ': <span style="color:#c4b5fd">$1</span>')
+    .replace(/:\s*(null)/g, ': <span style="color:#94a3b8">$1</span>');
+  return `<pre class="json-view json-formatted">${highlighted}</pre>`;
+}
+
 function escapeAttr(s) { return String(s||"").replace(/"/g, "&quot;").replace(/\n/g, "&#10;"); }
 
 function exportLogs() {
