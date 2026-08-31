@@ -1,8 +1,8 @@
 * { box-sizing: border-box; margin:0; padding:0; }
 html, body { width: 100%; height: 100%; min-width: 320px; min-height: 500px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif; background: #f8fafc; color: #0f172a; }
-/* 擴充彈窗：預設拉長至 720px（原 600 太短），瀏覽器會自動限制 */
-html, body { height: 720px; max-height: 90vh; }
-.popup-root { width: 100%; height: 720px; max-height: 90vh; min-width: 320px; min-height: 500px; display:flex; flex-direction:column; background: #fff; position: relative; }
+/* 擴充彈窗：預設再拉高 240px 至 960px（720+240），瀏覽器會自動限制 */
+html, body { height: 960px; max-height: 90vh; }
+.popup-root { width: 100%; height: 960px; max-height: 90vh; min-width: 320px; min-height: 500px; display:flex; flex-direction:column; background: #fff; position: relative; }
 /* 在懸浮 iframe 中則隨容器自適應（覆蓋固定高度） */
 html.in-floating, body.in-floating { height: 100% !important; max-height: 100% !important; min-height: 100% !important; }
 html.in-floating .popup-root, body.in-floating .popup-root { height: 100% !important; max-height: 100% !important; min-height: 100% !important; }

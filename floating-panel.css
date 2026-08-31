@@ -1,10 +1,10 @@
-/* Floating panel injected into page - 初始與彈窗同寬 380，高拉長至 720 */
+/* Floating panel injected into page - 初始與彈窗同寬 380，高再拉長 240 至 960 */
 #api-inspector-floating-root {
   position: fixed;
   top: 64px;
   right: 24px;
   width: 380px;
-  height: 720px;
+  height: 960px;
   min-width: 320px;
   min-height: 400px;
   max-width: 96vw;

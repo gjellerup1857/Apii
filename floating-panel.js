@@ -4,7 +4,7 @@
   window.__API_INSPECTOR_FLOATING_LOADED__ = true;
 
   const STORAGE_KEY = "apiInspectorFloating";
-  const DEFAULT_RECT = { top: 64, right: 24, width: 380, height: 720, pinned: false, minimized: false };
+  const DEFAULT_RECT = { top: 64, right: 24, width: 380, height: 960, pinned: false, minimized: false };
 
   let root = null;
   let headerEl = null;
