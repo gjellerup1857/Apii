@@ -52,6 +52,11 @@
       <select id="methodSelect"><option value="">全部 Methods</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>OPTIONS</option></select>
       <label class="auto-scroll"><input type="checkbox" id="autoScroll" checked> 自動滾動</label>
     </div>
+    <div class="fp-filters" style="gap:8px;padding-top:4px;border-top:1px dashed #f1f5f9;margin-top:4px;">
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#475569;"><input type="checkbox" id="filterApiOnly" checked> 僅 API (JSON/含 /api/)</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#475569;"><input type="checkbox" id="filterSameOrigin"> 僅同源</label>
+      <span style="margin-left:auto;font-size:11px;color:#94a3b8;">與 DevTools 對齊：主框架 + 導航清空</span>
+    </div>
     <div class="fp-stats">
       <span><i class="dot ok"></i> 成功 <b id="statOk">0</b></span>
       <span><i class="dot err"></i> 失敗 <b id="statErr">0</b></span>

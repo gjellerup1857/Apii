@@ -263,9 +263,14 @@ function clearLogsForTab(tabId, reason) {
 }
 
 try {
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    // url 變更代表導航開始（包含同頁 hash 除外，changeInfo.url 僅在主框架導航時出現）
-    if (changeInfo.url) {
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    // 任何主框架導航（含重整、同 URL 重載、status loading）都清空，與 DevTools 保持一致
+    if (changeInfo.status === "loading") {
+      // 避免對 chrome-extension:// 自身頁面的 loading 誤清
+      const url = changeInfo.url || (tab && tab.url) || "";
+      if (url && (url.startsWith("chrome-extension://") || url.startsWith("chrome://") || url.startsWith("about:"))) return;
+      clearLogsForTab(tabId, "tabsLoading");
+    } else if (changeInfo.url) {
       clearLogsForTab(tabId, "tabsUpdated");
     }
   });

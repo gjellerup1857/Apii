@@ -6,7 +6,22 @@ let methodFilter = "";
 let selectedId = null;
 let autoScroll = true;
 let currentTabId = null;
+let currentTabOrigin = null;
 let onlyCurrentTab = true;
+let filterApiOnly = true;
+let filterSameOrigin = false;
+
+function isApiLog(log) {
+  if (!log) return false;
+  if (log.responseBodyType === "json" || log.requestBodyType === "json") return true;
+  const url = (log.url || "").toLowerCase();
+  if (url.includes("/api/") || url.includes("/v1/") || url.includes("/v2/") || url.includes("/graphql") || url.includes("/rest/") || url.includes("/trpc")) return true;
+  const ct = log.responseHeaders && (log.responseHeaders["content-type"] || log.responseHeaders["Content-Type"] || "");
+  if (String(ct).toLowerCase().includes("application/json")) return true;
+  const reqCt = log.requestHeaders && (log.requestHeaders["content-type"] || log.requestHeaders["Content-Type"] || "");
+  if (String(reqCt).toLowerCase().includes("application/json")) return true;
+  return false;
+}
 
 const listEl = document.getElementById("list");
 const emptyEl = document.getElementById("empty");
@@ -40,21 +55,38 @@ async function resolveCurrentTabId() {
         if (tabIds.length) {
           // 取最新 log 的 tab
           const latest = [...allLogs].reverse().find(l => l.tabId && (l.frameId===0||l.frameId===undefined));
-          if (latest) { currentTabId = latest.tabId; return; }
+          if (latest) {
+            currentTabId = latest.tabId;
+            try { currentTabOrigin = new URL(latest.tabUrl || latest.pageUrl || "").hostname; } catch {}
+            return;
+          }
         }
         const all = await chrome.tabs.query({ currentWindow: true });
         const target = all.find(t => t.url && !t.url.startsWith("chrome-extension://") && !t.url.startsWith("chrome://"));
-        if (target) currentTabId = target.id;
-        else currentTabId = tabs[0].id;
+        if (target) {
+          currentTabId = target.id;
+          try { currentTabOrigin = new URL(target.url).hostname; } catch {}
+        } else {
+          currentTabId = tabs[0].id;
+          try { currentTabOrigin = new URL(tabs[0].url).hostname; } catch {}
+        }
       } else {
         currentTabId = tabs[0].id;
+        try { currentTabOrigin = new URL(tabs[0].url).hostname; } catch {}
       }
     }
   } catch {}
   // 若仍無，從最新日誌推斷
   if (currentTabId === null && allLogs.length) {
     const latest = [...allLogs].reverse().find(l => l.tabId && (l.frameId===0||l.frameId===undefined));
-    if (latest) currentTabId = latest.tabId;
+    if (latest) {
+      currentTabId = latest.tabId;
+      try { currentTabOrigin = new URL(latest.tabUrl || latest.pageUrl || "").hostname; } catch {}
+    }
+  }
+  if (!currentTabOrigin && allLogs.length) {
+    const latest = [...allLogs].reverse().find(l => l.tabUrl);
+    if (latest) try { currentTabOrigin = new URL(latest.tabUrl).hostname; } catch {}
   }
 }
 function updateTabSelector() {
@@ -207,6 +239,16 @@ function bindEvents() {
   });
   domainSelect?.addEventListener("change", () => { domainFilter = domainSelect.value; refresh(); });
   methodSelect?.addEventListener("change", () => { methodFilter = methodSelect.value; refresh(); });
+  const apiOnlyEl = document.getElementById("filterApiOnly");
+  const sameOriginEl = document.getElementById("filterSameOrigin");
+  if (apiOnlyEl) {
+    filterApiOnly = apiOnlyEl.checked;
+    apiOnlyEl.addEventListener("change", () => { filterApiOnly = apiOnlyEl.checked; refresh(); });
+  }
+  if (sameOriginEl) {
+    filterSameOrigin = sameOriginEl.checked;
+    sameOriginEl.addEventListener("change", () => { filterSameOrigin = sameOriginEl.checked; refresh(); });
+  }
   searchInput?.addEventListener("input", () => {
     searchQuery = searchInput.value.trim().toLowerCase();
     if (btnClearSearch) btnClearSearch.style.display = searchQuery ? "block" : "none";
@@ -236,6 +278,8 @@ function isMobile() { return window.innerWidth <= 768; }
 
 function filteredLogs() {
   let logs = [...getVisibleLogs()].reverse();
+  if (filterApiOnly) logs = logs.filter(isApiLog);
+  if (filterSameOrigin && currentTabOrigin) logs = logs.filter(l => l.domain === currentTabOrigin);
   if (filterType === "fetch") logs = logs.filter(l=>l.type==="fetch");
   else if (filterType==="xhr") logs = logs.filter(l=>l.type==="xhr");
   else if (filterType==="error") logs = logs.filter(l=>l.status>=400||l.status===0);

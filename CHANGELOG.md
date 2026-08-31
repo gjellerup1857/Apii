@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - 與 DevTools 對齊：僅顯示當前分頁主框架（`frameId===0`），`manifest` 改 `all_frames:false`，`background` 僅收主框架
-- 導航自動清空：`tabs.onUpdated` / `webNavigation.onCommitted` 按 `tabId` 清除該分頁舊日誌，新增 `CLEAR_LOGS_FOR_TAB`
-- UI 僅顯示 `tabId` 匹配當前分頁：`popup`/`sidepanel`/`floating` 自動解析 `currentTabId`，`fullpage` 新增 `tabSelect` 下拉（全部/單一 tab），統計與匯出皆以可見為準
+- 導航自動清空：`tabs.onUpdated(status:loading)` / `webNavigation.onCommitted` 按 `tabId` 清除該分頁舊日誌（含同 URL 重整），新增 `CLEAR_LOGS_FOR_TAB`，`badge` 改按分頁獨立顯示
+
+### Fixed
+- 修復重整後仍大量：`tabs.onUpdated` 原僅 `changeInfo.url` 導致 reload 未清，現改 `status:loading` 全觸發
+- 新增篩選與 DevTools 對齊：`僅 API (JSON/含 /api//graphql)` 預設勾選、`僅同源` 可選，`popup`/`fullpage` 皆支援，`filteredLogs` 先過 `isApiLog` 與 `domain===origin`
+- UI 僅顯示 `tabId` 匹配當前分頁：`popup`/`sidepanel`/`floating` 自動解析 `currentTabId/origin`，`fullpage` 新增 `tabSelect` 下拉（全部/單一 tab），統計、域篩選、匯出、清空皆以可見為準
 
 ## [1.0.4] - 2026-08-31
 

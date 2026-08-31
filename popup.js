@@ -5,7 +5,10 @@ let domainFilter = "";
 let methodFilter = "";
 let selectedId = null;
 let currentTabId = null;
+let currentTabOrigin = null;
 let onlyCurrentTab = true; // 與 DevTools 對齊：僅當前分頁主框架
+let filterApiOnly = true; // 預設僅 API，與用戶預期 1-2 筆對齊
+let filterSameOrigin = false;
 
 const listEl = document.getElementById("list");
 const emptyEl = document.getElementById("empty");
@@ -223,6 +226,17 @@ function bindEvents() {
 
   domainSelect.addEventListener("change", () => { domainFilter = domainSelect.value; refresh(); });
   methodSelect.addEventListener("change", () => { methodFilter = methodSelect.value; refresh(); });
+  // 僅 API / 僅同源 過濾
+  const apiOnlyEl = document.getElementById("filterApiOnly");
+  const sameOriginEl = document.getElementById("filterSameOrigin");
+  if (apiOnlyEl) {
+    filterApiOnly = apiOnlyEl.checked;
+    apiOnlyEl.addEventListener("change", () => { filterApiOnly = apiOnlyEl.checked; refresh(); });
+  }
+  if (sameOriginEl) {
+    filterSameOrigin = sameOriginEl.checked;
+    sameOriginEl.addEventListener("change", () => { filterSameOrigin = sameOriginEl.checked; refresh(); });
+  }
 
   searchInput.addEventListener("input", () => {
     searchQuery = searchInput.value.trim().toLowerCase();
@@ -245,6 +259,8 @@ function updateSubtitle() {
 function filteredLogs() {
   // 先以當前分頁主框架過濾，再套其他篩選，與 DevTools 對齊
   let logs = [...getVisibleLogs()].reverse(); // newest first
+  if (filterApiOnly) logs = logs.filter(isApiLog);
+  if (filterSameOrigin && currentTabOrigin) logs = logs.filter(l => l.domain === currentTabOrigin);
   if (filterType === "fetch") logs = logs.filter(l => l.type === "fetch");
   else if (filterType === "xhr") logs = logs.filter(l => l.type === "xhr");
   else if (filterType === "error") logs = logs.filter(l => l.status >= 400 || l.status === 0);
