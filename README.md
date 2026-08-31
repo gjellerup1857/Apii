@@ -1,11 +1,11 @@
-# API Inspector — Brave / Chrome 請求監控擴充功能
+# Apii — Brave / Chrome 請求監控擴充功能
 
 <p align="center">
-  <img src="icons/icon128.png" width="96" height="96" alt="API Inspector"/>
+  <img src="icons/icon128.png" width="96" height="96" alt="Apii"/>
 </p>
 
 <p align="center">
-  <a href="https://github.com/anomalyco/opencode"><img alt="Version" src="https://img.shields.io/badge/version-1.0.5-0ea5e9?style=flat-square"></a>
+  <a href="https://github.com/anomalyco/opencode"><img alt="Version" src="https://img.shields.io/badge/version-1.0.6-0ea5e9?style=flat-square"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square"></a>
   <a href="https://developer.chrome.com/docs/extensions/mv3/"><img alt="Manifest V3" src="https://img.shields.io/badge/manifest-v3-8b5cf6?style=flat-square"></a>
   <a href=".github/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/badge/CI-passing-22c55e?style=flat-square"></a>
@@ -62,7 +62,7 @@ cd brave-api-inspector
 
 1. 開啟 `brave://extensions`（或 `chrome://extensions`）→ 右上開啟「開發者模式」
 2. 點「載入未封裝項目」→ 選擇 `brave-api-inspector` 資料夾
-3. 重新整理任意網頁 → 點工具列 **API Inspector** 圖示
+3. 重新整理任意網頁 → 點工具列 **Apii** 圖示
 
 ### 方式二：Release Zip
 
@@ -145,7 +145,7 @@ zip -r dist/brave-api-inspector.zip . -x "*.git*" "*.DS_Store" "dist/*" "*.zip"
 
 ## 🌐 English
 
-**API Inspector** — Capture every `fetch`/`XHR` request params and response in Brave/Chrome, with MetaMask-like popup, standalone tab, sidePanel and draggable floating overlay (pin, resize, minimize), fully RWD.
+**Apii** — Capture every `fetch`/`XHR` request params and response in Brave/Chrome, with MetaMask-like popup, standalone tab, sidePanel and draggable floating overlay (pin, resize, minimize), fully RWD.
 
 - **Intercept**: `MAIN world` monkey-patch, `clone().text()` + `JSON.parse`, 50KB truncate
 - **Views**: popup 380×600 · fullpage grid · sidePanel · floating (iframe→popup, drag/resize/pin)

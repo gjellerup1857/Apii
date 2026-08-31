@@ -69,7 +69,7 @@
             <svg width="16" height="16" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="white" fill-opacity="0.9"/><path d="M7 14h14M14 7v14M9 9l10 10M19 9L9 19" stroke="#0ea5e9" stroke-width="1.6" stroke-linecap="round"/><circle cx="14" cy="14" r="3" fill="#0ea5e9"/></svg>
           </div>
           <div>
-            <div class="api-floating-title">API Inspector</div>
+            <div class="api-floating-title">Apii</div>
             <div class="api-floating-subtitle" style="font-size:10px; opacity:.85;">懸浮 • 可拖曳縮放</div>
           </div>
         </div>

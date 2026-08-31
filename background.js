@@ -21,7 +21,7 @@ async function persist() {
       logs = logs.slice(-500);
       try { await chrome.storage.local.set({ [STORAGE_KEY]: logs }); } catch {}
     }
-    console.warn("[API Inspector] persist failed", e);
+    console.warn("[Apii] persist failed", e);
   }
 }
 
@@ -325,7 +325,7 @@ function updateBadge() {
   const text = count > 0 ? (count > 999 ? "999+" : String(count)) : "";
   chrome.action.setBadgeText({ text });
   chrome.action.setBadgeBackgroundColor({ color: enabled ? "#0ea5e9" : "#94a3b8" });
-  chrome.action.setTitle({ title: `API Inspector ${enabled ? "(已啟用)" : "(已暫停)"} - ${count} 條主框架記錄（僅當前分頁顯示）` });
+  chrome.action.setTitle({ title: `Apii ${enabled ? "(已啟用)" : "(已暫停)"} - ${count} 條主框架記錄（僅當前分頁顯示）` });
   // 同步更新活躍分頁的獨立 badge
   chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
     if (tabs[0]) updateBadgeForTab(tabs[0].id);

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-08-31
+
+### Changed
+- 重新命名：`API Inspector` → `Apii`（`manifest.json` `name`/`action.default_title`、`package.json`、`popup/fullpage/sidepanel/floating` 標題、`README`、`background` 提示皆同步）
+
 ## [1.0.5] - 2026-08-31
 
 ### Changed

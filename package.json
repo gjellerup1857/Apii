@@ -1,7 +1,7 @@
 {
-  "name": "brave-api-inspector",
-  "version": "1.0.5",
-  "description": "Brave/Chrome 擴充功能：自動擷取 fetch/XHR 請求參數與回應，支援浮動、側欄、懸浮拖曳",
+  "name": "apii",
+  "version": "1.0.6",
+  "description": "Apii - Brave/Chrome 擴充功能：自動擷取 fetch/XHR 請求參數與回應，支援浮動、側欄、懸浮拖曳",
   "private": true,
   "scripts": {
     "lint": "node --check background.js && node --check content.js && node --check injected.js && node --check popup.js && node --check fullpage.js && node --check floating-panel.js && python3 -m json.tool manifest.json > /dev/null && echo \"lint ok\"",

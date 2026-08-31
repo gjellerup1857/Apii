@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "API Inspector - 請求監控器",
-  "version": "1.0.5",
+  "name": "Apii",
+  "version": "1.0.6",
   "description": "自動記錄網頁中所有 API 請求的參數與回應，支援浮動面板、獨立標籤頁與側邊欄 RWD 顯示",
   "permissions": [
     "storage",
@@ -18,7 +18,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "API Inspector",
+    "default_title": "Apii",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

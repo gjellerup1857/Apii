@@ -6,7 +6,7 @@
     script.onload = () => script.remove();
     (document.head || document.documentElement).appendChild(script);
   } catch (e) {
-    console.warn("[API Inspector] inject failed", e);
+    console.warn("[Apii] inject failed", e);
   }
 
   let enabledCache = true;

@@ -386,7 +386,7 @@
           error: status === 0 ? "Network Error" : null
         });
       } catch (e) {
-        console.debug("[API Inspector] XHR log error", e);
+        console.debug("[Apii] XHR log error", e);
       }
     };
 
@@ -397,5 +397,5 @@
   };
 
   // Initial state broadcast
-  console.debug("[API Inspector] Injected fetch/XHR hooks");
+  console.debug("[Apii] Injected fetch/XHR hooks");
 })();
