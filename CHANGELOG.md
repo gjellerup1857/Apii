@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-08-31
+
+### Fixed
+- 修正 Logo 圓角被瀏覽器二次裁切：改回方角黑底（`corner alpha 255`），保留內層白框圓角，避免 Brave 擴充功能列的圓角遮擋內容，已重新生成 16/32/48/64/128/256/512/1024 方角版
+
 ## [1.0.3] - 2026-08-31
 
 ### Changed
