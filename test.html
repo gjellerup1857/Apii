@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Inspector 測試頁</title>
+<style>
+  body { font-family: system-ui; max-width:800px; margin:40px auto; padding:0 16px; line-height:1.6; }
+  button { padding:10px 16px; margin:6px; border-radius:8px; border:1px solid #e2e8f0; background:#0ea5e9; color:white; cursor:pointer; }
+  button.secondary { background:white; color:#0ea5e9; }
+  .log { background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:8px; margin-top:12px; font-size:13px; white-space:pre-wrap; word-break:break-all; }
+  code { background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+  <h1>API Inspector 測試頁</h1>
+  <p>安裝擴充功能後，點擊下方按鈕會發出 <code>fetch</code> / <code>XHR</code>，請開啟擴充功能的 <b>浮動面板</b> 或 <b>完整頁</b> 查看是否已記錄請求參數與回應。</p>
+
+  <div>
+    <button onclick="testFetchGet()">Fetch GET (jsonplaceholder)</button>
+    <button onclick="testFetchPost()">Fetch POST (JSON)</button>
+    <button onclick="testFetchQuery()">Fetch GET + QueryParams</button>
+    <button onclick="testXHR()">XHR GET</button>
+    <button onclick="testXHRPost()">XHR POST Form</button>
+    <button onclick="testError()">Fetch 404 Error</button>
+    <button class="secondary" onclick="testMultiple()">連續打 5 個 API</button>
+  </div>
+
+  <div id="output" class="log">等待操作...</div>
+
+  <script>
+    const out = document.getElementById('output');
+    function log(msg){ out.textContent = new Date().toLocaleTimeString() + " - " + msg + "\n" + out.textContent; }
+
+    async function testFetchGet(){
+      log("→ fetch GET https://jsonplaceholder.typicode.com/posts/1");
+      const res = await fetch("https://jsonplaceholder.typicode.com/posts/1");
+      const data = await res.json();
+      log("← 200 " + JSON.stringify(data).slice(0,120));
+    }
+    async function testFetchPost(){
+      log("→ fetch POST https://jsonplaceholder.typicode.com/posts + JSON body");
+      const res = await fetch("https://jsonplaceholder.typicode.com/posts", {
+        method:"POST",
+        headers:{"Content-Type":"application/json", "X-Custom":"test123"},
+        body: JSON.stringify({title:"foo", body:"bar", userId:1})
+      });
+      const data = await res.json();
+      log("← " + res.status + " " + JSON.stringify(data).slice(0,120));
+    }
+    async function testFetchQuery(){
+      const url = "https://jsonplaceholder.typicode.com/comments?postId=1&filter=active&filter=archived";
+      log("→ fetch GET " + url);
+      const res = await fetch(url);
+      const data = await res.json();
+      log("← " + res.status + " comments=" + data.length);
+    }
+    function testXHR(){
+      log("→ XHR GET https://jsonplaceholder.typicode.com/users/1");
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", "https://jsonplaceholder.typicode.com/users/1");
+      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+      xhr.onload = ()=> log("← XHR " + xhr.status + " " + xhr.responseText.slice(0,120));
+      xhr.onerror = ()=> log("← XHR error");
+      xhr.send();
+    }
+    function testXHRPost(){
+      log("→ XHR POST FormData");
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "https://httpbin.org/post");
+      const fd = new FormData();
+      fd.append("username","testuser");
+      fd.append("file", new Blob(["hello"], {type:"text/plain"}), "hello.txt");
+      xhr.onload = ()=> log("← XHR POST " + xhr.status + " " + xhr.responseText.slice(0,200));
+      xhr.send(fd);
+    }
+    async function testError(){
+      log("→ fetch 404 https://jsonplaceholder.typicode.com/invalid");
+      const res = await fetch("https://jsonplaceholder.typicode.com/invalid");
+      log("← " + res.status + " " + res.statusText);
+    }
+    async function testMultiple(){
+      for(let i=1;i<=5;i++){
+        fetch(`https://jsonplaceholder.typicode.com/posts/${i}`).then(r=>r.json()).then(d=>log(`← post ${i} ok`));
+      }
+      log("→ 已發出 5 個 fetch");
+    }
+  </script>
+</body>
+</html>

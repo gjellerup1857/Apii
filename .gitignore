@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Extension build artifacts
+dist/
+*.zip
+*.crx
+*.xpi
+*.pem
+*.key
+
+# Node (if added later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Env
+.env
+.env.local
+
+# Temporary
+tmp/
+temp/
+*.tmp

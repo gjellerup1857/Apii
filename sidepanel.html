@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Inspector - 側邊欄</title>
+<link rel="stylesheet" href="fullpage.css">
+<style>
+  /* Sidepanel overrides - ensure RWD narrow */
+  html, body { height: 100vh; overflow: hidden; }
+  body { display:flex; flex-direction:column; }
+  .fp-header { padding:10px 12px; }
+  .fp-header-left .fp-subtitle { display:none; }
+  .fp-header-left .badge { font-size:10px; padding:3px 8px; }
+  .fp-toolbar { padding:10px 12px; }
+  .fp-main { grid-template-columns: 1fr !important; }
+  .fp-detail-pane { display:none !important; }
+  .hint { display:none !important; }
+  .fp-list-pane { border-right:none; }
+  /* In sidepanel, clicks open mobile drawer as detail view (same as mobile) */
+</style>
+</head>
+<body class="sidepanel-mode">
+  <header class="fp-header">
+    <div class="fp-header-left">
+      <div class="fp-logo">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="#0ea5e9"/><path d="M7 14h14M14 7v14M9 9l10 10M19 9L9 19" stroke="white" stroke-width="1.6" stroke-linecap="round"/><circle cx="14" cy="14" r="3" fill="white" fill-opacity="0.9"/></svg>
+      </div>
+      <div>
+        <div class="fp-title" style="font-size:14px">API Inspector</div>
+        <div class="fp-subtitle">側邊欄</div>
+      </div>
+      <span class="badge" id="badge">0 條</span>
+    </div>
+    <div class="fp-header-right">
+      <label class="fp-toggle" title="啟用監控" style="padding:4px 8px">
+        <input type="checkbox" id="enableToggle" checked>
+        <span class="slider" style="width:32px;height:18px"></span>
+      </label>
+      <button id="btnFloat" class="fp-btn secondary" style="padding:5px 10px;font-size:11px" title="以懸浮面板開啟（回到浮動）">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0 1 10 0v2"/></svg>
+        懸浮
+      </button>
+      <button id="btnExpand" class="fp-btn secondary" style="padding:5px 10px;font-size:11px" title="在新標籤頁開啟完整版">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+        展開
+      </button>
+      <button id="btnClosePanel" class="fp-btn ghost" style="padding:5px 8px;font-size:11px;background:white;color:#334155;border:1px solid #e2e8f0" title="關閉側邊欄，回到頁面懸浮面板">
+        ✕ 關閉
+      </button>
+    </div>
+  </header>
+
+  <div class="fp-toolbar">
+    <div class="fp-search" style="padding:8px 12px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="searchInput" type="text" placeholder="搜尋…">
+      <button id="btnClearSearch" class="clear-btn" style="display:none">×</button>
+    </div>
+    <div class="fp-filters" style="gap:6px">
+      <div class="filter-tabs" id="filterTabs">
+        <button data-filter="all" class="active">全部</button>
+        <button data-filter="fetch">Fetch</button>
+        <button data-filter="xhr">XHR</button>
+        <button data-filter="error">錯誤</button>
+      </div>
+      <select id="domainSelect" style="flex:1;min-width:0"><option value="">全部網域</option></select>
+    </div>
+    <div class="fp-stats" style="font-size:11px">
+      <span><i class="dot ok"></i> <b id="statOk">0</b></span>
+      <span><i class="dot err"></i> <b id="statErr">0</b></span>
+      <span><i class="dot fetch"></i> <b id="statFetch">0</b></span>
+      <span><i class="dot xhr"></i> <b id="statXhr">0</b></span>
+      <button id="btnClear" class="fp-btn ghost" style="margin-left:auto;padding:4px 8px;font-size:11px;background:white;color:#334155;border:1px solid #e2e8f0">清空</button>
+      <button id="btnExport" class="fp-btn ghost" style="padding:4px 8px;font-size:11px;background:white;color:#334155;border:1px solid #e2e8f0">匯出</button>
+    </div>
+  </div>
+
+  <main class="fp-main">
+    <section class="fp-list-pane">
+      <div id="list" class="fp-list" style="padding:8px"></div>
+      <div id="empty" class="fp-empty" style="padding:24px 14px">
+        <div class="empty-icon">📡</div>
+        <div class="empty-title" style="font-size:13px">尚未有記錄</div>
+        <div class="empty-desc" style="font-size:12px">操作網頁觸發 API 後即時顯示於此</div>
+      </div>
+    </section>
+    <section class="fp-detail-pane" id="detailPane" style="display:none">
+      <div id="detailEmpty" class="detail-empty"></div>
+      <div id="detailContent" class="detail-content" style="display:none"></div>
+    </section>
+  </main>
+
+  <div id="mobileDrawer" class="mobile-drawer">
+    <div class="drawer-header">
+      <button id="btnCloseDrawer" class="icon-btn" style="border:1px solid #e2e8f0;background:white;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px">← 返回</button>
+      <button id="btnCopyCurl" class="fp-btn ghost small" style="background:white;color:#334155;border:1px solid #e2e8f0">複製 cURL</button>
+    </div>
+    <div id="mobileDetail" class="mobile-detail" style="padding:12px"></div>
+  </div>
+
+  <select id="methodSelect" style="display:none"><option value="">全部 Methods</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>OPTIONS</option></select>
+  <label style="display:none"><input type="checkbox" id="autoScroll" checked></label>
+
+  <div id="toast" class="toast"></div>
+  <!-- Reuse fullpage logic but with sidepanel overrides -->
+  <script src="fullpage.js"></script>
+  <script>
+    // sidepanel: expand robust
+    document.getElementById('btnExpand')?.addEventListener('click', async () => {
+      const url = chrome.runtime.getURL("fullpage.html");
+      try {
+        if (chrome.tabs && chrome.tabs.create) { await chrome.tabs.create({ url }); return; }
+      } catch {}
+      chrome.runtime.sendMessage({ type: 'OPEN_FULLPAGE' }, () => {
+        if (chrome.runtime.lastError) window.open(url, "_blank");
+      });
+    });
+    // sidepanel: open as floating panel (close sidepanel -> show overlay)
+    document.getElementById('btnFloat')?.addEventListener('click', async () => {
+      chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }, (res) => {
+        if (chrome.runtime.lastError) {
+          (async () => {
+            try {
+              const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+              if (tab && tab.id) try { await chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING" }); } catch {}
+            } catch {}
+          })();
+        }
+      });
+      // try to close sidepanel
+      try { window.close(); } catch {}
+      try { if (chrome.sidePanel) await chrome.sidePanel.setOptions({ enabled: false }); setTimeout(()=>{ try{ chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); }catch{} }, 600); } catch {}
+      // fallback window if content injection fails (handled in bg, but also try here after delay)
+      setTimeout(async () => {
+        try { const url = chrome.runtime.getURL("popup.html"); await chrome.windows.create({ url, type: "popup", width: 420, height: 640 }); } catch {}
+      }, 800);
+    });
+    // sidepanel: close and revert to floating
+    document.getElementById('btnClosePanel')?.addEventListener('click', async () => {
+      chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }, () => {
+        if (chrome.runtime.lastError) {}
+      });
+      try { window.close(); } catch {}
+      try { if (chrome.sidePanel) await chrome.sidePanel.setOptions({ enabled: false }); setTimeout(()=>{ try{ chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); }catch{} }, 600); } catch {}
+      chrome.runtime.sendMessage({ type: "CLOSE_SIDEPANEL" });
+      // also directly try
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && tab.id) try { await chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING" }); } catch {}
+      } catch {}
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Inspector</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-root">
+    <!-- Header like MetaMask -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="#0ea5e9"/><path d="M7 14h14M14 7v14M9 9l10 10M19 9L9 19" stroke="white" stroke-width="1.6" stroke-linecap="round"/><circle cx="14" cy="14" r="3" fill="white" fill-opacity="0.9"/></svg>
+        </div>
+        <div>
+          <div class="title">API Inspector</div>
+          <div class="subtitle" id="subtitle">監控中 • <span id="count">0</span> 條</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <label class="toggle" title="暫停/啟用監控">
+          <input type="checkbox" id="enableToggle" checked>
+          <span class="slider"></span>
+        </label>
+        <button id="btnFloat" class="icon-btn" title="以懸浮面板開啟（可拖曳縮放、固定置頂）">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0 1 10 0v2"/><circle cx="12" cy="14" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button id="btnSidePanel" class="icon-btn" title="開啟側邊欄">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+        </button>
+        <button id="btnExpand" class="icon-btn" title="在新標籤頁開啟">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats bar -->
+    <div class="stats">
+      <div class="stat"><span class="dot ok"></span> 成功 <b id="statOk">0</b></div>
+      <div class="stat"><span class="dot err"></span> 失敗 <b id="statErr">0</b></div>
+      <div class="stat"><span class="dot fetch"></span> fetch <b id="statFetch">0</b></div>
+      <div class="stat"><span class="dot xhr"></span> xhr <b id="statXhr">0</b></div>
+      <div class="spacer"></div>
+      <button id="btnClear" class="text-btn">清空</button>
+      <button id="btnExport" class="text-btn">匯出</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="searchInput" type="text" placeholder="搜尋 URL、Method、Status…">
+        <button id="btnClearSearch" class="clear-search" style="display:none">×</button>
+      </div>
+      <div class="filter-tabs" id="filterTabs">
+        <button data-filter="all" class="active">全部</button>
+        <button data-filter="fetch">Fetch</button>
+        <button data-filter="xhr">XHR</button>
+        <button data-filter="error">錯誤</button>
+        <button data-filter="success">成功</button>
+      </div>
+      <div class="domain-filter">
+        <select id="domainSelect"><option value="">全部網域</option></select>
+        <select id="methodSelect"><option value="">全部 Methods</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>OPTIONS</option></select>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div id="list" class="list"></div>
+
+    <div id="empty" class="empty">
+      <div class="empty-icon">📡</div>
+      <div class="empty-title">尚未擷取到任何請求</div>
+      <div class="empty-desc">在網頁中觸發 API（切換頁面、點擊按鈕、送出表單）後，這裡會即時顯示請求參數與回應內容。</div>
+      <div class="empty-tip">提示：確保上方開關為啟用狀態，且頁面已重新整理後再試。</div>
+    </div>
+
+    <!-- Detail Drawer (for popup, slide over) -->
+    <div id="drawer" class="drawer">
+      <div class="drawer-header">
+        <button id="btnBack" class="icon-btn">←</button>
+        <div class="drawer-title">請求詳情</div>
+        <button id="btnCopyCurl" class="text-btn">複製 cURL</button>
+      </div>
+      <div id="drawerContent" class="drawer-content"></div>
+    </div>
+
+    <footer class="footer">
+      <span class="footer-hint">Brave / Chrome 擴充功能 • 支援側邊欄</span>
+      <button id="btnHelp" class="link-btn" title="使用說明">?</button>
+    </footer>
+  </div>
+<script src="popup.js"></script>
+</body>
+</html>

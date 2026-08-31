@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Inspector - 完整檢視</title>
+<link rel="stylesheet" href="fullpage.css">
+</head>
+<body>
+  <header class="fp-header">
+    <div class="fp-header-left">
+      <div class="fp-logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="#0ea5e9"/><path d="M7 14h14M14 7v14M9 9l10 10M19 9L9 19" stroke="white" stroke-width="1.6" stroke-linecap="round"/><circle cx="14" cy="14" r="3" fill="white" fill-opacity="0.9"/></svg>
+      </div>
+      <div>
+        <div class="fp-title">API Inspector</div>
+        <div class="fp-subtitle">完整檢視 • RWD 支援側邊欄</div>
+      </div>
+      <span class="badge" id="badge">0 條記錄</span>
+    </div>
+    <div class="fp-header-right">
+      <label class="fp-toggle" title="啟用監控">
+        <input type="checkbox" id="enableToggle" checked>
+        <span class="slider"></span>
+        <span class="toggle-label">監控</span>
+      </label>
+      <button id="btnSidePanel" class="fp-btn secondary" title="在側邊欄開啟">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+        側邊欄
+      </button>
+      <button id="btnClear" class="fp-btn ghost">清空</button>
+      <button id="btnExport" class="fp-btn primary">匯出 JSON</button>
+    </div>
+  </header>
+
+  <div class="fp-toolbar">
+    <div class="fp-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="searchInput" type="text" placeholder="搜尋 URL、Method、Status、Body…">
+      <button id="btnClearSearch" class="clear-btn" style="display:none">×</button>
+    </div>
+    <div class="fp-filters">
+      <div class="filter-tabs" id="filterTabs">
+        <button data-filter="all" class="active">全部</button>
+        <button data-filter="fetch">Fetch</button>
+        <button data-filter="xhr">XHR</button>
+        <button data-filter="error">錯誤</button>
+        <button data-filter="success">成功</button>
+      </div>
+      <select id="domainSelect"><option value="">全部網域</option></select>
+      <select id="methodSelect"><option value="">全部 Methods</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>OPTIONS</option></select>
+      <label class="auto-scroll"><input type="checkbox" id="autoScroll" checked> 自動滾動</label>
+    </div>
+    <div class="fp-stats">
+      <span><i class="dot ok"></i> 成功 <b id="statOk">0</b></span>
+      <span><i class="dot err"></i> 失敗 <b id="statErr">0</b></span>
+      <span><i class="dot fetch"></i> fetch <b id="statFetch">0</b></span>
+      <span><i class="dot xhr"></i> xhr <b id="statXhr">0</b></span>
+      <span class="hint">提示：可將此頁加入 Brave 側邊欄，窄版會自動 RWD</span>
+    </div>
+  </div>
+
+  <main class="fp-main">
+    <section class="fp-list-pane">
+      <div id="list" class="fp-list"></div>
+      <div id="empty" class="fp-empty">
+        <div class="empty-icon">📡</div>
+        <div class="empty-title">尚未擷取到任何請求</div>
+        <div class="empty-desc">在其他分頁操作網頁後，切回此頁即可看到記錄。支援 Fetch / XHR，包含請求參數與完整回應。</div>
+        <div class="empty-steps">
+          <div class="step"><span>1</span> 確認上方「監控」已開啟</div>
+          <div class="step"><span>2</span> 重新整理目標網頁並觸發操作</div>
+          <div class="step"><span>3</span> 回到此頁查看記錄，點擊卡片看詳情</div>
+        </div>
+      </div>
+    </section>
+    <section class="fp-detail-pane" id="detailPane">
+      <div id="detailEmpty" class="detail-empty">
+        <div class="detail-empty-icon">👈</div>
+        <div>請從左側選擇一筆請求以查看詳情</div>
+        <div class="detail-empty-hint">支援 JSON 格式化、複製 cURL、複製單段內容</div>
+      </div>
+      <div id="detailContent" class="detail-content" style="display:none"></div>
+    </section>
+  </main>
+
+  <!-- Mobile drawer for detail when narrow -->
+  <div id="mobileDrawer" class="mobile-drawer">
+    <div class="drawer-header">
+      <button id="btnCloseDrawer" class="icon-btn">← 返回列表</button>
+      <button id="btnCopyCurl" class="fp-btn ghost small">複製 cURL</button>
+    </div>
+    <div id="mobileDetail" class="mobile-detail"></div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+<script src="fullpage.js"></script>
+</body>
+</html>

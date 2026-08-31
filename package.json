@@ -1,0 +1,18 @@
+{
+  "name": "brave-api-inspector",
+  "version": "1.0.2",
+  "description": "Brave/Chrome 擴充功能：自動擷取 fetch/XHR 請求參數與回應，支援浮動、側欄、懸浮拖曳",
+  "private": true,
+  "scripts": {
+    "lint": "node --check background.js && node --check content.js && node --check injected.js && node --check popup.js && node --check fullpage.js && node --check floating-panel.js && python3 -m json.tool manifest.json > /dev/null && echo \"lint ok\"",
+    "build": "mkdir -p dist && rm -f dist/*.zip && zip -r dist/brave-api-inspector.zip . -x \"*.git*\" \"*.DS_Store\" \"dist/*\" \"*.zip\" \"node_modules/*\" \"assets/screenshots/*\" \"*.pem\" && ls -lh dist/",
+    "build:release": "mkdir -p dist && VERSION=$(node -p \"require('./manifest.json').version\") && zip -r dist/brave-api-inspector-v${VERSION}.zip . -x \"*.git*\" \"*.DS_Store\" \"dist/*\" \"*.zip\" \"node_modules/*\" \"assets/screenshots/*\" && ls -lh dist/",
+    "dev:server": "python3 -m http.server 8000"
+  },
+  "keywords": ["brave", "chrome", "extension", "api", "inspector", "fetch", "xhr", "sidepanel"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/brave-api-inspector.git"
+  }
+}

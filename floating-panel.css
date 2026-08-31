@@ -1,0 +1,171 @@
+/* Floating panel injected into page */
+#api-inspector-floating-root {
+  position: fixed;
+  top: 64px;
+  right: 24px;
+  width: 400px;
+  height: 600px;
+  min-width: 320px;
+  min-height: 400px;
+  max-width: 96vw;
+  max-height: 92vh;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(15,23,42,0.18), 0 8px 24px rgba(15,23,42,0.12);
+  z-index: 2147483646;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", sans-serif;
+  transition: box-shadow .2s, border-color .2s;
+  user-select: none;
+}
+#api-inspector-floating-root.pinned {
+  z-index: 2147483647;
+  box-shadow: 0 24px 72px rgba(14,165,233,0.22), 0 8px 32px rgba(15,23,42,0.18);
+  border-color: #0ea5e9;
+}
+#api-inspector-floating-root.minimized {
+  height: 44px !important;
+  min-height: 44px !important;
+  overflow: hidden;
+}
+#api-inspector-floating-root.dragging {
+  opacity: 0.92;
+  transition: none;
+  user-select: none;
+}
+#api-inspector-floating-root.resizing {
+  transition: none;
+}
+
+/* Header - drag handle */
+.api-floating-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  cursor: grab;
+  flex-shrink: 0;
+  user-select: none;
+}
+.api-floating-header:active { cursor: grabbing; }
+.api-floating-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.api-floating-logo {
+  width: 22px; height: 22px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.api-floating-title {
+  font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.api-floating-subtitle {
+  font-size: 10px; opacity: .85; white-space: nowrap;
+}
+.api-floating-controls {
+  display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+}
+.api-floating-btn {
+  width: 26px; height: 26px;
+  border: none;
+  background: rgba(255,255,255,0.16);
+  color: white;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  backdrop-filter: blur(4px);
+  transition: .15s;
+}
+.api-floating-btn:hover { background: rgba(255,255,255,0.26); transform: translateY(-1px); }
+.api-floating-btn.active { background: #22c55e; color: white; }
+.api-floating-btn.close:hover { background: #ef4444; }
+
+/* Toolbar below header for quick actions */
+.api-floating-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.api-floating-toolbar .spacer { flex: 1; }
+.api-floating-toolbar button {
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #334155;
+}
+.api-floating-toolbar button:hover { background: #f1f5f9; }
+
+/* Iframe wrapper */
+.api-floating-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f8fafc;
+}
+.api-floating-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+  min-height: 0;
+}
+
+/* Resize handles */
+.api-floating-resize {
+  position: absolute;
+  z-index: 3;
+}
+.api-floating-resize-br {
+  right: 0; bottom: 0;
+  width: 18px; height: 18px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, #cbd5e1 50%, #cbd5e1 55%, transparent 55%, transparent 70%, #cbd5e1 70%, #cbd5e1 75%, transparent 75%);
+  border-radius: 0 0 12px 0;
+  opacity: .8;
+}
+.api-floating-resize-r {
+  right: 0; top: 44px; bottom: 18px;
+  width: 6px; cursor: ew-resize;
+}
+.api-floating-resize-b {
+  left: 6px; right: 18px; bottom: 0;
+  height: 6px; cursor: ns-resize;
+}
+.api-floating-resize:hover { background-color: rgba(14,165,233,0.08); }
+
+/* Minimized bar */
+#api-inspector-floating-root.minimized .api-floating-body,
+#api-inspector-floating-root.minimized .api-floating-toolbar,
+#api-inspector-floating-root.minimized .api-floating-resize { display: none; }
+#api-inspector-floating-root.minimized .api-floating-header { border-radius: 12px; }
+
+/* Ensure page content not blocked when panel is open - no overlay, just floating */
+#api-inspector-floating-root.hidden { display: none !important; }
+
+/* Responsive: when width < 360, toolbar wraps */
+@media (max-width: 420px) {
+  #api-inspector-floating-root { width: 96vw !important; right: 2vw !important; left: 2vw !important; }
+}
