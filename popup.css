@@ -1,6 +1,10 @@
 * { box-sizing: border-box; margin:0; padding:0; }
-html, body { width: 380px; height: 600px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif; background: #f8fafc; color: #0f172a; }
-.popup-root { width: 380px; height: 600px; display:flex; flex-direction:column; background: #fff; position: relative; }
+html, body { width: 100%; height: 100%; min-width: 320px; min-height: 400px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif; background: #f8fafc; color: #0f172a; }
+.popup-root { width: 100%; height: 100%; min-width: 320px; min-height: 400px; display:flex; flex-direction:column; background: #fff; position: relative; }
+/* 擴充彈窗固定尺寸由瀏覽器限制；在懸浮 iframe 中則隨容器自適應 */
+@media (max-width: 400px) {
+  html, body, .popup-root { min-width: 320px; }
+}
 
 /* Header - like metamask */
 .header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #e2e8f0; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; }
@@ -117,4 +121,31 @@ details[open] summary { margin-bottom:6px; }
   .kv-val { max-width:100%; }
   .card-meta { gap:6px; }
   .detail-head { padding:6px 8px; }
+}
+
+/* 懸浮放大時的 RWD：面板被拖寬後，內容自動重排 */
+@media (min-width: 520px) {
+  .filters { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .search-wrap { grid-column: 1 / -1; }
+  .filter-tabs { grid-column: 1 / -1; }
+  .domain-filter { margin-top:0; }
+  .filter-options { margin-top:0; }
+  .stats { flex-wrap:wrap; gap:8px 14px; }
+  .card-header { padding:12px 14px; }
+}
+@media (min-width: 700px) {
+  /* 寬版懸浮：列表與詳情並排，類似 fullpage */
+  .popup-root { flex-direction: row; flex-wrap: wrap; }
+  .header, .stats, .filters, .footer { width:100%; flex-shrink:0; }
+  .list { flex: 1 1 42%; min-width: 320px; max-width: 45%; border-right: 1px solid #e2e8f0; }
+  .empty { flex: 1 1 42%; min-width: 320px; max-width: 45%; border-right: 1px solid #e2e8f0; }
+  .drawer { position: relative; transform: none !important; flex: 1 1 55%; min-width: 320px; inset:auto; width:auto; height:auto; border-left: 1px solid #e2e8f0; border-radius:0; }
+  .drawer:not(.open) { display:flex !important; opacity:0.6; }
+  .drawer:not(.open) .drawer-header { opacity:0.7; }
+  .drawer.open { opacity:1; }
+  .drawer-header .icon-btn#btnBack { display:none; }
+  .detail-section { border-radius:10px; }
+}
+@media (min-width: 900px) {
+  .list, .empty { max-width: 380px; }
 }

@@ -46,6 +46,7 @@
     root = document.createElement("div");
     root.id = "api-inspector-floating-root";
     if (state.pinned) root.classList.add("pinned");
+    else root.classList.add("unpinned");
     if (state.minimized) root.classList.add("minimized");
     // position: right-based to fixed, but we store left/top for drag
     // If we have stored left, use left, otherwise use right
@@ -74,7 +75,7 @@
           </div>
         </div>
         <div class="api-floating-controls">
-          <button class="api-floating-btn" data-action="pin" title="固定在最前 / 取消固定">📌</button>
+          <button class="api-floating-btn" data-action="pin" title="點擊解鎖以自由拖動、縮放（目前已鎖定）">🔒</button>
           <button class="api-floating-btn" data-action="minimize" title="最小化">−</button>
           <button class="api-floating-btn" data-action="expand" title="在新標籤頁展開">↗</button>
           <button class="api-floating-btn" data-action="sidepanel" title="移到側邊欄">⇥</button>
@@ -162,8 +163,18 @@
   function applyPinState() {
     if (!root) return;
     root.classList.toggle("pinned", !!state.pinned);
+    root.classList.toggle("unpinned", !state.pinned);
     const btn = root.querySelector('[data-action="pin"]');
-    if (btn) btn.classList.toggle("active", !!state.pinned);
+    if (btn) {
+      btn.classList.toggle("active", !!state.pinned);
+      btn.title = state.pinned ? "已解除固定（可自由拖動縮放）→ 點擊鎖定" : "點擊解鎖以自由拖動、縮放（目前已鎖定）";
+      btn.textContent = state.pinned ? "🔓" : "🔒";
+    }
+    // 更新 header 游標與縮放手柄可見性
+    if (headerEl) headerEl.style.cursor = state.pinned ? "grab" : "default";
+    root.querySelectorAll("[data-resize]").forEach(h => {
+      h.style.display = state.pinned ? "block" : "none";
+    });
   }
 
   function toggleMinimize() {
@@ -191,6 +202,12 @@
   }
 
   function onDragStart(e) {
+    if (!state.pinned) {
+      // 未解鎖時不可拖動，提示解鎖
+      const t = root?.querySelector('[data-action="pin"]');
+      if (t) { t.animate([{ transform: "scale(1)" }, { transform: "scale(1.2)" }, { transform: "scale(1)" }], { duration: 300 }); }
+      return;
+    }
     if (e.target.closest("button")) return;
     if (state.minimized) {
       // allow drag even when minimized
@@ -209,6 +226,7 @@
   }
 
   function onResizeStart(e, dir) {
+    if (!state.pinned) return;
     isResizing = true;
     root.classList.add("resizing");
     if (iframe) iframe.style.pointerEvents = "none";

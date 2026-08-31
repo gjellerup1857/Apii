@@ -40,7 +40,7 @@
   transition: none;
 }
 
-/* Header - drag handle */
+/* Header - drag handle: only when pinned (unlocked) */
 .api-floating-header {
   display: flex;
   align-items: center;
@@ -49,11 +49,15 @@
   padding: 8px 10px;
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
   color: white;
-  cursor: grab;
+  cursor: default;
   flex-shrink: 0;
   user-select: none;
 }
-.api-floating-header:active { cursor: grabbing; }
+#api-inspector-floating-root.pinned .api-floating-header { cursor: grab; }
+#api-inspector-floating-root.pinned .api-floating-header:active { cursor: grabbing; }
+#api-inspector-floating-root.unpinned .api-floating-header { cursor: default; opacity: 0.97; }
+#api-inspector-floating-root.unpinned .api-floating-resize { display: none !important; }
+#api-inspector-floating-root.pinned .api-floating-resize { display: block; }
 .api-floating-header-left {
   display: flex;
   align-items: center;
