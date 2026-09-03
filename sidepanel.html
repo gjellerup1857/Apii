@@ -116,7 +116,7 @@
         if (chrome.runtime.lastError) window.open(url, "_blank");
       });
     });
-    // sidepanel: open as floating panel (close sidepanel -> show overlay) - robust close
+    // sidepanel: robust close - 保證可關閉
     async function closeSidePanelRobust() {
       // 1) 先確保浮動面板已在當前 tab 顯示，避免關閉後無內容
       try { chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }); } catch {}
@@ -124,37 +124,44 @@
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab && tab.id) try { await chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING" }); } catch {}
       } catch {}
-      // 2) 多重嘗試關閉側邊欄
+      // 2) 多重嘗試關閉側邊欄（按優先級）
       let closed = false;
-      try { window.close(); closed = true; } catch {}
-      try {
-        const win = await chrome.windows.getCurrent();
-        const wid = win && win.id;
-        if (chrome.sidePanel) {
-          // 優先嘗試 close API（若存在）
-          if (typeof chrome.sidePanel.close === "function") {
-            try { await chrome.sidePanel.close({ windowId: wid }); closed = true; } catch {}
+      const tryClose = async () => {
+        // a) 嘗試 window.close（在 sidepanel 環境中可能有效）
+        try { window.close(); closed = true; } catch {}
+        // b) 嘗試 chrome.sidePanel.close（新 API）
+        try {
+          const win = await chrome.windows.getCurrent();
+          const wid = win && win.id;
+          if (chrome.sidePanel && typeof chrome.sidePanel.close === "function") {
+            try { await chrome.sidePanel.close({ windowId: wid }); closed = true; return; } catch {}
+            try { await chrome.sidePanel.close(); closed = true; return; } catch {}
           }
-          // 再嘗試 disable
-          try { await chrome.sidePanel.setOptions({ enabled: false, windowId: wid }); closed = true; } catch {}
-          try { await chrome.sidePanel.setOptions({ enabled: false }); closed = true; } catch {}
-          // 500ms 後恢復啟用，供下次開啟
-          setTimeout(() => {
-            try { chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html", windowId: wid }); } catch {}
-            try { chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); } catch {}
-          }, 700);
-        }
-      } catch {}
-      try { chrome.runtime.sendMessage({ type: "CLOSE_SIDEPANEL_ROBUST" }); } catch {}
-      // 3) 備援：若仍未關閉，提示手動關閉並改用浮動視窗
+          // c) 嘗試 disable（會隱藏）
+          if (chrome.sidePanel) {
+            try { await chrome.sidePanel.setOptions({ enabled: false, windowId: wid }); closed = true; } catch {}
+            try { await chrome.sidePanel.setOptions({ enabled: false }); closed = true; } catch {}
+            // 800ms 後恢復啟用，供下次開啟（否則下次無法開啟）
+            setTimeout(() => {
+              try { chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html", windowId: wid }); } catch {}
+              try { chrome.sidePanel.setOptions({ enabled: true, path: "sidepanel.html" }); } catch {}
+            }, 900);
+          }
+        } catch {}
+        // d) 嘗試發送給 background 關閉
+        try { chrome.runtime.sendMessage({ type: "CLOSE_SIDEPANEL_ROBUST" }); closed = true; } catch {}
+        try { chrome.runtime.sendMessage({ type: "CLOSE_SIDEPANEL" }); } catch {}
+      };
+      await tryClose();
+      // 3) 備援：若 1 秒後仍可見，提示手動並提供浮動視窗替代
       setTimeout(() => {
-        // 檢查是否仍在側邊欄（visible），若是則彈浮動視窗作為替代
-        if (!closed && document.visibilityState === "visible") {
-          // 不自動彈窗，避免騷擾，僅提示
+        if (!document.hidden && document.visibilityState === "visible") {
           const t = document.getElementById("toast");
-          if (t) { t.textContent = "若側邊欄未自動關閉，請點擊側邊欄右上角 X，或改用懸浮面板"; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 2500); }
+          if (t) { t.textContent = "側邊欄未自動關閉，請點擊瀏覽器側邊欄右上角 X 關閉，已同時開啟懸浮面板"; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
+          // 確保浮動已顯示
+          try { chrome.runtime.sendMessage({ type: "SHOW_FLOATING" }); } catch {}
         }
-      }, 900);
+      }, 1100);
     }
     document.getElementById('btnFloat')?.addEventListener('click', async () => {
       await closeSidePanelRobust();

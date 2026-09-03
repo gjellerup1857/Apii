@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.0.9] - 2026-08-31
+
+### Fixed
+- 修復 F5 重整時面板自動彈出：`floating-panel` 取消 `visible=true` 自動 `showPanel`，改為僅在明確 `SHOW_FLOATING` 時顯示，`pagehide` 時自動重置 `visible=false`
+- 修復側邊欄展開後關閉無效：`sidepanel` `closeSidePanelRobust` 重構多重關閉（`window.close` → `chrome.sidePanel.close(windowId)` → `setOptions(enabled:false, windowId)`），`background` 同步支援 `windowId` 精準關閉，失敗時提示手動點 X
+
 ## [1.0.8] - 2026-08-31
 
 ### Changed

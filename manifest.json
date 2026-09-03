@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Apii",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "自動記錄網頁中所有 API 請求的參數與回應，支援浮動面板、獨立標籤頁與側邊欄 RWD 顯示",
   "permissions": [
     "storage",

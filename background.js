@@ -281,6 +281,8 @@ function clearLogsForTab(tabId, reason) {
     broadcast("LOGS_CLEARED_FOR_TAB", { tabId, reason });
     updateBadgeForTab(tabId);
   }
+  // 同步隱藏該 tab 的懸浮面板（避免 F5 後自動彈出）
+  try { chrome.tabs.sendMessage(tabId, { type: "HIDE_FLOATING", reason: "navigation" }).catch(()=>{}); } catch {}
 }
 
 try {
