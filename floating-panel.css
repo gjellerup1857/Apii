@@ -169,7 +169,7 @@
 /* Ensure page content not blocked when panel is open - no overlay, just floating */
 #api-inspector-floating-root.hidden { display: none !important; }
 
-/* 高度 RWD：初始 960 時內容等比例擴展 */
+/* 高度 RWD：初始 960 時內容等比例擴展而非留白 */
 @media (min-height: 800px) {
   #api-inspector-floating-root { box-shadow: 0 24px 72px rgba(15,23,42,0.20), 0 10px 28px rgba(15,23,42,0.14); }
   .api-floating-toolbar { padding: 8px 10px; }
@@ -177,6 +177,12 @@
 @media (min-height: 900px) {
   #api-inspector-floating-root { border-radius: 14px; }
   .api-floating-header { padding: 10px 12px; }
+}
+@media (min-height: 960px) {
+  #api-inspector-floating-root { border-radius: 16px; }
+  .api-floating-header { padding: 12px 14px; }
+  .api-floating-toolbar { padding: 10px 12px; }
+  .api-floating-body { background: #f8fafc; }
 }
 
 /* Responsive: when width < 360, toolbar wraps */

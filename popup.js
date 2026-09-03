@@ -7,7 +7,7 @@ let selectedId = null;
 let currentTabId = null;
 let currentTabOrigin = null;
 let onlyCurrentTab = true; // 與 DevTools 對齊：僅當前分頁主框架
-let filterApiOnly = true; // 預設僅 API，與用戶預期 1-2 筆對齊
+let filterApiOnly = false; // 預設顯示全部主框架，與 DevTools 保持一致
 let filterSameOrigin = false;
 
 const listEl = document.getElementById("list");

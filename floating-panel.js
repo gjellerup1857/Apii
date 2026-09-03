@@ -384,34 +384,19 @@
 
   // Also listen for storage changes to sync across tabs? Not needed.
 
-  // Initialize: 預設不自動彈出，避免 F5 重整時自動顯示
-  // 僅在使用者明確點擊「懸浮」或上次在同一 tab 且未導航時才顯示
+  // Initialize: 若上次為顯示狀態，自動恢復（避免 F5 後突然消失，保持可見）
   function init() {
     loadState().then(() => {
-      // 修正：不再在每次載入時自動 showPanel，即使 visible 為 true
-      // 僅在使用者主動 trigger 或透過背景的 SHOW_FLOATING 消息時顯示
-      // 為避免舊版本已存 visible=true 導致 F5 仍彈出，首次載入時強制隱藏並重置
       if (state.visible) {
-        // 若是導航後首次載入，自動重置為隱藏（避免 F5 彈出）
-        const isReload = performance.getEntriesByType && performance.getEntriesByType("navigation")[0] && performance.getEntriesByType("navigation")[0].type === "reload";
-        if (isReload) {
-          state.visible = false;
-          saveState();
+        const tryShow = () => {
+          if (document.body) showPanel();
+          else setTimeout(tryShow, 200);
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", () => tryShow());
         } else {
-          // 非 reload 且 visible 為 true，可能是使用者之前主動開啟且未關閉，仍不自動顯示，改為等待明確操作
-          // 為避免打擾，保持隱藏
-          state.visible = false;
-          saveState();
+          tryShow();
         }
-      }
-      // 不自動 tryShow，需等待 SHOW_FLOATING 消息
-    });
-    // 監聽導航隱藏消息已在 background 的 clearLogsForTab 中發送 HIDE_FLOATING，此處也監聽 pagehide
-    window.addEventListener("pagehide", () => {
-      // 頁面卸載時不自動保持可見
-      if (state.visible) {
-        state.visible = false;
-        saveState();
       }
     });
   }

@@ -152,6 +152,21 @@ details[open] summary { margin-bottom:6px; }
   .json-view.json-formatted { max-height: 520px; }
   .detail-body { padding: 12px; }
 }
+@media (min-height: 960px) {
+  /* 解鎖前 960 高度的等比例擴展：讓列表與空狀態填滿而非留白 */
+  .list { padding: 18px; gap: 16px; }
+  .empty { padding: 90px 28px; min-height: 320px; justify-content: center; }
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-title { font-size: 15px; }
+  .filters { padding: 16px 18px; }
+  .stats { padding: 12px 16px; }
+  .card { border-radius: 12px; }
+  .card-header { padding: 14px 16px; }
+  .card-meta { padding: 10px 16px 14px; }
+  .detail-body { padding: 14px; }
+  .json-view { max-height: 460px; }
+  .json-view.json-formatted { max-height: 600px; }
+}
 @media (min-height: 1000px) {
   .list { gap: 16px; }
   .card { border-radius: 12px; }

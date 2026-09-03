@@ -270,6 +270,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 // 導航自動清空（按 tabId，僅主框架）：與 DevTools 對齊，跳轉後不保留舊日誌
+// 注意：不再自動隱藏懸浮面板，避免「突然消失」
 function clearLogsForTab(tabId, reason) {
   if (tabId === undefined || tabId === null) return;
   const before = logs.length;
@@ -281,8 +282,6 @@ function clearLogsForTab(tabId, reason) {
     broadcast("LOGS_CLEARED_FOR_TAB", { tabId, reason });
     updateBadgeForTab(tabId);
   }
-  // 同步隱藏該 tab 的懸浮面板（避免 F5 後自動彈出）
-  try { chrome.tabs.sendMessage(tabId, { type: "HIDE_FLOATING", reason: "navigation" }).catch(()=>{}); } catch {}
 }
 
 try {

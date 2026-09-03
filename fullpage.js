@@ -8,7 +8,7 @@ let autoScroll = true;
 let currentTabId = null;
 let currentTabOrigin = null;
 let onlyCurrentTab = true;
-let filterApiOnly = true;
+let filterApiOnly = false;
 let filterSameOrigin = false;
 
 function isApiLog(log) {
