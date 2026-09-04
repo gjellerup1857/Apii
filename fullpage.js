@@ -110,6 +110,17 @@ function updateTabSelector() {
   }
 }
 
+let fpRefreshTimer = null;
+function scheduleFpRefresh(immediate) {
+  if (immediate) {
+    if (fpRefreshTimer) { clearTimeout(fpRefreshTimer); fpRefreshTimer = null; }
+    refresh();
+    return;
+  }
+  if (fpRefreshTimer) return;
+  fpRefreshTimer = setTimeout(() => { fpRefreshTimer = null; refresh(); }, 200);
+}
+
 // Init
 function init() {
   resolveCurrentTabId().then(() => {
@@ -120,7 +131,7 @@ function init() {
   try {
     chrome.tabs.onActivated.addListener(async () => {
       await resolveCurrentTabId();
-      refresh();
+      scheduleFpRefresh(true);
       updateTabSelector();
     });
   } catch {}
@@ -129,7 +140,7 @@ function init() {
       allLogs.push(msg.data);
       updateTabSelector();
       if (isVisibleLog(msg.data)) {
-        refresh();
+        scheduleFpRefresh(false);
         if (autoScroll && isMobile()) listEl.scrollTop = 0;
       }
     } else if (msg.type === "LOGS_CLEARED") {
@@ -137,11 +148,11 @@ function init() {
       selectedId = null;
       showEmptyDetail();
       updateTabSelector();
-      refresh();
+      scheduleFpRefresh(true);
     } else if (msg.type === "LOGS_CLEARED_FOR_TAB") {
       const tid = msg.data && msg.data.tabId;
       if (tid === currentTabId) {
-        refresh();
+        scheduleFpRefresh(true);
         updateTabSelector();
         if (selectedId && !allLogs.find(l => l.id===selectedId && isVisibleLog(l))) {
           selectedId = null; showEmptyDetail();
@@ -152,7 +163,7 @@ function init() {
     } else if (msg.type === "LOGS_UPDATED") {
       allLogs = msg.data || [];
       updateTabSelector();
-      refresh();
+      scheduleFpRefresh(false);
     } else if (msg.type === "ENABLED_CHANGED") {
       enableToggle.checked = !!msg.data;
     }
@@ -161,7 +172,7 @@ function init() {
     if (c.apiInspectorLogs) {
       allLogs = c.apiInspectorLogs.newValue || [];
       updateTabSelector();
-      refresh();
+      scheduleFpRefresh(false);
     }
     if (c.apiInspectorEnabled) enableToggle.checked = !!c.apiInspectorEnabled.newValue;
   });
@@ -374,9 +385,17 @@ function updateDomainOptions(){
   if(!domains.includes(cur)) domainFilter="";
 }
 
+const FP_MAX_RENDER = 150;
 function renderList(logs){
   listEl.innerHTML="";
-  logs.forEach(log=>{
+  const sliced = logs.slice(0, FP_MAX_RENDER);
+  if (logs.length > FP_MAX_RENDER) {
+    const more = document.createElement("div");
+    more.style.cssText = "font-size:12px;color:#64748b;text-align:center;padding:8px;background:#fff;border:1px dashed #e2e8f0;border-radius:8px;flex-shrink:0;";
+    more.textContent = `僅顯示最新 ${FP_MAX_RENDER} 筆，共 ${logs.length} 筆（請用搜尋/篩選縮小範圍）`;
+    listEl.appendChild(more);
+  }
+  sliced.forEach(log=>{
     const card=document.createElement("div");
     card.className="card"+(log.id===selectedId?" selected":"");
     card.dataset.id=log.id;
@@ -598,13 +617,19 @@ function isJsonContent(body, type){
   return false;
 }
 function renderJsonBlock(jsonStr){
-  const escaped=esc(jsonStr);
-  const highlighted=escaped
-    .replace(/(&quot;(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;\s*:)/g,'<span style="color:#93c5fd">$1</span>')
-    .replace(/:\s*(&quot;(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;)/g,': <span style="color:#86efac">$1</span>')
-    .replace(/:\s*(-?\d+\.?\d*(e[+-]?\d+)?)/g,': <span style="color:#fcd34d">$1</span>')
-    .replace(/:\s*(true|false)/g,': <span style="color:#c4b5fd">$1</span>')
-    .replace(/:\s*(null)/g,': <span style="color:#94a3b8">$1</span>');
+  let s = String(jsonStr || "");
+  if (s.length > 15000) s = s.slice(0, 15000) + `\n...[僅顯示前 15000 字元，共 ${String(jsonStr).length} 字元]`;
+  const escaped=esc(s);
+  let highlighted = escaped;
+  try {
+    highlighted = escaped.replace(/(&quot;[^&]*?&quot;)(\s*:)?/g, (m, str, colon) => {
+      if (colon) return '<span style="color:#93c5fd">' + str + '</span>' + colon;
+      return '<span style="color:#86efac">' + str + '</span>';
+    });
+    highlighted = highlighted.replace(/:\s*(-?\d+\.?\d*)/g, ': <span style="color:#fcd34d">$1</span>');
+    highlighted = highlighted.replace(/:\s*(true|false)/g, ': <span style="color:#c4b5fd">$1</span>');
+    highlighted = highlighted.replace(/:\s*(null)/g, ': <span style="color:#94a3b8">$1</span>');
+  } catch { highlighted = escaped; }
   return `<pre class="json-view json-formatted">${highlighted}</pre>`;
 }
 function esc(s){ if(s===null||s===undefined) return ""; return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }

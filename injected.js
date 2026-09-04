@@ -3,7 +3,7 @@
   window.__API_INSPECTOR_INJECTED__ = true;
 
   let enabled = true;
-  const MAX_BODY_LENGTH = 50000;
+  const MAX_BODY_LENGTH = 20000;
 
   // Listen for enable/disable from content script
   window.addEventListener("message", (event) => {
@@ -53,7 +53,13 @@
   function shouldIgnore(url) {
     if (!url) return true;
     const s = String(url);
-    return s.startsWith("chrome-extension://") || s.startsWith("chrome://") || s.startsWith("moz-extension://") || s.startsWith("about:") || s.startsWith("data:");
+    if (s.startsWith("chrome-extension://") || s.startsWith("chrome://") || s.startsWith("moz-extension://") || s.startsWith("about:") || s.startsWith("data:") || s.startsWith("blob:") || s.startsWith("file:")) return true;
+    // 只攔截 http(s)，避免 chrome-search 等內部協議噪音
+    if (!s.startsWith("http://") && !s.startsWith("https://") && !s.startsWith("/") && !s.startsWith("./") && !s.startsWith("../")) {
+      // 相對路徑以外的非 http 直接忽略（例如 ws:, wss: 由其他邏輯處理）
+      if (s.includes("://")) return true;
+    }
+    return false;
   }
 
   function sendLog(payload) {

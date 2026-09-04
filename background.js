@@ -1,6 +1,25 @@
-const MAX_LOGS = 1000;
+const MAX_LOGS = 300;
 const STORAGE_KEY = "apiInspectorLogs";
 const ENABLED_KEY = "apiInspectorEnabled";
+const STORE_BODY_LIMIT = 8000;
+function truncateForStore(v) {
+  if (typeof v === "string") return v.length > STORE_BODY_LIMIT ? v.slice(0, STORE_BODY_LIMIT) + `\n...[truncated ${v.length - STORE_BODY_LIMIT} chars]` : v;
+  return v;
+}
+function sanitizeForStore(payload) {
+  try {
+    const copy = { ...payload };
+    if (typeof copy.responseBody === "string") copy.responseBody = truncateForStore(copy.responseBody);
+    else if (copy.responseBody && typeof copy.responseBody === "object") {
+      try {
+        const s = JSON.stringify(copy.responseBody);
+        if (s.length > STORE_BODY_LIMIT) copy.responseBody = s.slice(0, STORE_BODY_LIMIT) + `\n...[truncated ${s.length - STORE_BODY_LIMIT} chars]`;
+      } catch {}
+    }
+    if (typeof copy.requestBody === "string") copy.requestBody = truncateForStore(copy.requestBody);
+    return copy;
+  } catch { return payload; }
+}
 
 let logs = [];
 let enabled = true;
@@ -16,9 +35,9 @@ async function persist() {
   try {
     await chrome.storage.local.set({ [STORAGE_KEY]: logs });
   } catch (e) {
-    // if quota exceeded, trim and retry
-    if (logs.length > 100) {
-      logs = logs.slice(-500);
+    // if quota exceeded, trim aggressively and retry
+    if (logs.length > 50) {
+      logs = logs.slice(-150);
       try { await chrome.storage.local.set({ [STORAGE_KEY]: logs }); } catch {}
     }
     console.warn("[Apii] persist failed", e);
@@ -51,13 +70,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     payload.tabUrl = tabUrl || payload.pageUrl || "";
     payload.frameId = frameId;
     payload.id = payload.id || Math.random().toString(36).slice(2);
-    // Avoid huge objects exceeding storage quota - truncate responseBody if needed
-    // Already truncated in injected, but ensure storage size
-    logs.push(payload);
+    // 去重：同一 tab 短時間內相同 method+url+status 視為重複（React StrictMode / 重試）
+    try {
+      const last = logs.length ? logs[logs.length - 1] : null;
+      if (last && last.tabId === payload.tabId && last.method === payload.method && last.url === payload.url && last.status === payload.status && Math.abs((payload.timestamp || 0) - (last.timestamp || 0)) < 120) {
+        sendResponse({ ok: true, ignored: true, reason: "duplicate" });
+        return true;
+      }
+    } catch {}
+    const stored = sanitizeForStore(payload);
+    logs.push(stored);
     if (logs.length > MAX_LOGS) logs = logs.slice(-MAX_LOGS);
     persist();
     // Notify listeners
-    broadcast("NEW_LOG", payload);
+    broadcast("NEW_LOG", stored);
     updateBadgeForTab(tabId);
     sendResponse({ ok: true });
     return true;
@@ -304,6 +330,14 @@ try {
         clearLogsForTab(details.tabId, "webNavCommitted");
       }
     });
+    // SPA (history.pushState / replaceState) 不會觸發 tabs.onUpdated，必須在這裡清空，否則會跨頁累積看起來比 devtools 多
+    try {
+      chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+        if (details.frameId === 0) {
+          clearLogsForTab(details.tabId, "historyState");
+        }
+      });
+    } catch {}
     // 前進/重整等
     chrome.webNavigation.onBeforeNavigate.addListener((details) => {
       if (details.frameId === 0) {

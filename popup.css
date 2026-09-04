@@ -1,18 +1,14 @@
 * { box-sizing: border-box; margin:0; padding:0; }
-html, body { width: 100%; height: 100%; min-width: 320px; min-height: 500px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif; background: #f8fafc; color: #0f172a; }
-/* 擴充彈窗：預設再拉高 240px 至 960px（720+240），瀏覽器會自動限制 */
-html, body { height: 960px; max-height: 90vh; }
-.popup-root { width: 100%; height: 960px; max-height: 90vh; min-width: 320px; min-height: 500px; display:flex; flex-direction:column; background: #fff; position: relative; }
-/* 在懸浮 iframe 中則隨容器自適應（覆蓋固定高度） */
-html.in-floating, body.in-floating { height: 100% !important; max-height: 100% !important; min-height: 100% !important; }
-html.in-floating .popup-root, body.in-floating .popup-root { height: 100% !important; max-height: 100% !important; min-height: 100% !important; }
-/* 擴充彈窗固定尺寸由瀏覽器限制；在懸浮 iframe 中則隨容器自適應 */
-@media (max-width: 400px) {
-  html, body, .popup-root { min-width: 320px; }
-}
+/* Action popup：鎖定 Chrome 安全最大值 400x600，避免 width:100% 造成自動擴展回授無限拉伸，
+   也避免 960 超過 Chrome 上限導致底部 footer 被裁掉 */
+html, body { width: 400px; height: 600px; max-width: 400px; max-height: 600px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", "Noto Sans TC", sans-serif; background: #f8fafc; color: #0f172a; }
+.popup-root { width: 400px; height: 600px; max-width: 400px; max-height: 600px; display:flex; flex-direction:column; background: #fff; position: relative; overflow: hidden; }
+/* 在懸浮 iframe 中才允許流體自適應 */
+html.in-floating, body.in-floating { width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important; }
+html.in-floating .popup-root, body.in-floating .popup-root { width: 100% !important; height: 100% !important; max-width: none !important; max-height: none !important; min-width: 0 !important; min-height: 0 !important; }
 
 /* Header - like metamask */
-.header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #e2e8f0; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #e2e8f0; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; flex-shrink:0; }
 .header-left { display:flex; align-items:center; gap:10px; }
 .logo { width:32px; height:32px; background: rgba(255,255,255,0.15); border-radius:8px; display:flex; align-items:center; justify-content:center; backdrop-filter: blur(8px); }
 .title { font-weight:700; font-size:14px; letter-spacing:0.2px; }
@@ -32,7 +28,7 @@ html.in-floating .popup-root, body.in-floating .popup-root { height: 100% !impor
 .icon-btn:active { transform: scale(0.96); }
 
 /* Stats */
-.stats { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:11px; color:#475569; }
+.stats { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f8fafc; border-bottom:1px solid #e2e8f0; font-size:11px; color:#475569; flex-shrink:0; }
 .stat { display:flex; align-items:center; gap:5px; }
 .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
 .dot.ok { background:#22c55e; } .dot.err { background:#ef4444; } .dot.fetch { background:#0ea5e9; } .dot.xhr { background:#8b5cf6; }
@@ -40,8 +36,8 @@ html.in-floating .popup-root, body.in-floating .popup-root { height: 100% !impor
 .text-btn { font-size:11px; padding:4px 8px; border:1px solid #e2e8f0; background:white; border-radius:6px; cursor:pointer; color:#334155; }
 .text-btn:hover { background:#f1f5f9; border-color:#cbd5e1; }
 
-/* Filters */
-.filters { padding:10px 12px; border-bottom:1px solid #e2e8f0; background:white; }
+/* Filters：收緊 padding 確保 600 高度內 footer 可見 */
+.filters { padding:8px 12px; border-bottom:1px solid #e2e8f0; background:white; flex-shrink:0; }
 .search-wrap { display:flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; }
 .search-wrap input { flex:1; border:none; background:transparent; outline:none; font-size:12px; color:#0f172a; }
 .search-wrap input::placeholder { color:#94a3b8; }
@@ -116,7 +112,7 @@ html.in-floating .popup-root, body.in-floating .popup-root { height: 100% !impor
 .kv-json .json-view { margin-top:6px; }
 details summary { user-select:none; }
 details[open] summary { margin-bottom:6px; }
-.footer { padding:6px 12px; border-top:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#94a3b8; background:white; }
+.footer { padding:8px 12px; border-top:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#94a3b8; background:white; flex-shrink:0; min-height:32px; }
 .link-btn { width:20px; height:20px; border-radius:50%; border:1px solid #e2e8f0; background:white; cursor:pointer; font-size:11px; color:#64748b; }
 
 /* 超窄面板（側邊欄 320px）文字不溢出、KV 改為縱向 */
@@ -173,29 +169,30 @@ details[open] summary { margin-bottom:6px; }
   .card-header { padding: 14px 16px; }
 }
 
-/* 懸浮放大時的 RWD：面板被拖寬後，內容自動重排 */
+/* 懸浮放大時的 RWD：只在 iframe 內生效，避免 action popup 觸發寬度回授無限拉伸 */
+html.in-floating body.in-floating .filters, html.in-floating .filters { }
 @media (min-width: 520px) {
-  .filters { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-  .search-wrap { grid-column: 1 / -1; }
-  .filter-tabs { grid-column: 1 / -1; }
-  .domain-filter { margin-top:0; }
-  .filter-options { margin-top:0; }
-  .stats { flex-wrap:wrap; gap:8px 14px; }
-  .card-header { padding:12px 14px; }
+  html.in-floating .filters { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  html.in-floating .search-wrap { grid-column: 1 / -1; }
+  html.in-floating .filter-tabs { grid-column: 1 / -1; }
+  html.in-floating .domain-filter { margin-top:0; }
+  html.in-floating .filter-options { margin-top:0; }
+  html.in-floating .stats { flex-wrap:wrap; gap:8px 14px; }
+  html.in-floating .card-header { padding:12px 14px; }
 }
 @media (min-width: 700px) {
-  /* 寬版懸浮：列表與詳情並排，類似 fullpage */
-  .popup-root { flex-direction: row; flex-wrap: wrap; }
-  .header, .stats, .filters, .footer { width:100%; flex-shrink:0; }
-  .list { flex: 1 1 42%; min-width: 320px; max-width: 45%; border-right: 1px solid #e2e8f0; }
-  .empty { flex: 1 1 42%; min-width: 320px; max-width: 45%; border-right: 1px solid #e2e8f0; }
-  .drawer { position: relative; transform: none !important; flex: 1 1 55%; min-width: 320px; inset:auto; width:auto; height:auto; border-left: 1px solid #e2e8f0; border-radius:0; }
-  .drawer:not(.open) { display:flex !important; opacity:0.6; }
-  .drawer:not(.open) .drawer-header { opacity:0.7; }
-  .drawer.open { opacity:1; }
-  .drawer-header .icon-btn#btnBack { display:none; }
-  .detail-section { border-radius:10px; }
+  /* 寬版懸浮：列表與詳情並排，類似 fullpage；僅限 floating，避免 popup 無限變寬 */
+  html.in-floating .popup-root { flex-direction: row; flex-wrap: wrap; }
+  html.in-floating .header, html.in-floating .stats, html.in-floating .filters, html.in-floating .footer { width:100%; flex-shrink:0; }
+  html.in-floating .list { flex: 1 1 42%; min-width: 0; max-width: 45%; border-right: 1px solid #e2e8f0; }
+  html.in-floating .empty { flex: 1 1 42%; min-width: 0; max-width: 45%; border-right: 1px solid #e2e8f0; }
+  html.in-floating .drawer { position: relative; transform: none !important; flex: 1 1 55%; min-width: 0; inset:auto; width:auto; height:auto; border-left: 1px solid #e2e8f0; border-radius:0; }
+  html.in-floating .drawer:not(.open) { display:flex !important; opacity:0.6; }
+  html.in-floating .drawer:not(.open) .drawer-header { opacity:0.7; }
+  html.in-floating .drawer.open { opacity:1; }
+  html.in-floating .drawer-header .icon-btn#btnBack { display:none; }
+  html.in-floating .detail-section { border-radius:10px; }
 }
 @media (min-width: 900px) {
-  .list, .empty { max-width: 380px; }
+  html.in-floating .list, html.in-floating .empty { max-width: 380px; }
 }

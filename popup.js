@@ -59,6 +59,18 @@ async function resolveCurrentTabId() {
   } catch {}
 }
 
+let refreshTimer = null;
+function scheduleRefresh(immediate) {
+  // 節流：短時間大量 API 到達時合併為一次渲染，避免每筆都全量重繪吃掉記憶體
+  if (immediate) {
+    if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+    refresh();
+    return;
+  }
+  if (refreshTimer) return;
+  refreshTimer = setTimeout(() => { refreshTimer = null; refresh(); }, 200);
+}
+
 function init() {
   resolveCurrentTabId().then(() => {
     loadLogs();
@@ -69,32 +81,32 @@ function init() {
   try {
     chrome.tabs.onActivated.addListener(async () => {
       await resolveCurrentTabId();
-      refresh();
+      scheduleRefresh(true);
     });
   } catch {}
   // Listen for new logs in real time
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "NEW_LOG") {
       allLogs.push(msg.data);
-      // 僅當前分頁主框架才即時刷新，避免其他分頁噪音
-      if (isVisibleLog(msg.data)) refresh();
+      // 僅當前分頁主框架才即時刷新，避免其他分頁噪音；且節流合併
+      if (isVisibleLog(msg.data)) scheduleRefresh(false);
       else {
         // 仍更新徽章等，但列表不抖動
         updateSubtitle();
       }
     } else if (msg.type === "LOGS_CLEARED") {
       allLogs = [];
-      refresh();
+      scheduleRefresh(true);
     } else if (msg.type === "LOGS_UPDATED") {
       allLogs = msg.data || [];
-      refresh();
+      scheduleRefresh(false);
     } else if (msg.type === "LOGS_CLEARED_FOR_TAB") {
       const tid = msg.data && msg.data.tabId;
       if (tid !== undefined && tid === currentTabId) {
         // 當前分頁被導航清空
-        refresh();
+        scheduleRefresh(true);
       } else if (tid === undefined) {
-        refresh();
+        scheduleRefresh(true);
       } else {
         // 其他分頁清空，僅更新統計
         updateSubtitle();
@@ -105,10 +117,11 @@ function init() {
     }
   });
   // also poll via storage changes (sidepanel/fullpage may update directly)
+  // 注意：每筆 log 的 persist 都會觸發一次，為避免與 NEW_LOG 雙重刷新，這裡也節流
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.apiInspectorLogs) {
       allLogs = changes.apiInspectorLogs.newValue || [];
-      refresh();
+      scheduleRefresh(false);
     }
   });
 }
@@ -338,9 +351,17 @@ function updateDomainOptions() {
   if (!domains.includes(current)) domainFilter = "";
 }
 
+const MAX_RENDER = 150;
 function renderList(logs) {
   listEl.innerHTML = "";
-  logs.forEach(log => {
+  const sliced = logs.slice(0, MAX_RENDER);
+  if (logs.length > MAX_RENDER) {
+    const more = document.createElement("div");
+    more.style.cssText = "font-size:11px;color:#64748b;text-align:center;padding:6px;background:#fff;border:1px dashed #e2e8f0;border-radius:8px;flex-shrink:0;";
+    more.textContent = `僅顯示最新 ${MAX_RENDER} 筆，共 ${logs.length} 筆（請用搜尋/篩選縮小範圍）`;
+    listEl.appendChild(more);
+  }
+  sliced.forEach(log => {
     const card = document.createElement("div");
     card.className = "card";
     card.dataset.id = log.id;
@@ -548,13 +569,20 @@ function isJsonContent(body, type) {
 
 function renderJsonBlock(jsonStr) {
   // 語法高亮：key 藍、字串綠、數字黃、布林紫、null 灰
-  const escaped = escapeHtml(jsonStr);
-  const highlighted = escaped
-    .replace(/(&quot;(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;\s*:)/g, '<span style="color:#93c5fd">$1</span>')
-    .replace(/:\s*(&quot;(?:\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;)/g, ': <span style="color:#86efac">$1</span>')
-    .replace(/:\s*(-?\d+\.?\d*(e[+-]?\d+)?)/g, ': <span style="color:#fcd34d">$1</span>')
-    .replace(/:\s*(true|false)/g, ': <span style="color:#c4b5fd">$1</span>')
-    .replace(/:\s*(null)/g, ': <span style="color:#94a3b8">$1</span>');
+  // 安全版：限制長度 + 簡單正則，避免災難性回溯吃掉記憶體
+  let s = String(jsonStr || "");
+  if (s.length > 15000) s = s.slice(0, 15000) + `\n...[僅顯示前 15000 字元，共 ${String(jsonStr).length} 字元]`;
+  const escaped = escapeHtml(s);
+  let highlighted = escaped;
+  try {
+    highlighted = escaped.replace(/(&quot;[^&]*?&quot;)(\s*:)?/g, (m, str, colon) => {
+      if (colon) return '<span style="color:#93c5fd">' + str + '</span>' + colon;
+      return '<span style="color:#86efac">' + str + '</span>';
+    });
+    highlighted = highlighted.replace(/:\s*(-?\d+\.?\d*)/g, ': <span style="color:#fcd34d">$1</span>');
+    highlighted = highlighted.replace(/:\s*(true|false)/g, ': <span style="color:#c4b5fd">$1</span>');
+    highlighted = highlighted.replace(/:\s*(null)/g, ': <span style="color:#94a3b8">$1</span>');
+  } catch { highlighted = escaped; }
   return `<pre class="json-view json-formatted">${highlighted}</pre>`;
 }
 

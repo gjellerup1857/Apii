@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.0.10] - 2026-09-04
+
+### Fixed
+- 修復開啟插件後面板無限拉伸寬度 + 瀏覽器記憶體爆掉：`popup` 改回固定 `400x600`，`width:100%` 與 `@media min-width` 寬版並排只在 `html.in-floating` 生效，阻斷 Chrome popup 自動擴展回授
+- 修復 floating 狀態污染：載入時 clamp 寬 `320-900`、高 `400-800`，重置歷史巨大尺寸；`mousemove` 改 rAF 節流，`mouseup` 綁到 `window` + `blur` 避免放開在 iframe 外卡住持續拉伸；`max-width/height` 硬上限
+- 修復 API 數量遠多於 devtools：`MAX_LOGS 1000→300`、injected 截斷 `50k→20k`、storage 寫入再截斷 `8k`，短時間同 `method+url+status` 去重，新增 `webNavigation.onHistoryStateUpdated` SPA 清空，`popup/fullpage` 渲染節流 `200ms` + 只渲染最新 `150` 筆，JSON 高亮改安全正則 + `15k` 上限
+- 調整默認高度確保底部可見：action popup 固定 `400x600`（Chrome 安全最大值），`header/stats/filters/footer` 全部 `flex-shrink:0` + `list flex:1`，floating 默認 `400x680`（頁內不受限可稍高）
+
 ## [1.0.9] - 2026-08-31
 
 ### Fixed

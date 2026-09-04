@@ -4,7 +4,15 @@
   window.__API_INSPECTOR_FLOATING_LOADED__ = true;
 
   const STORAGE_KEY = "apiInspectorFloating";
-  const DEFAULT_RECT = { top: 64, right: 24, width: 380, height: 960, pinned: false, minimized: false };
+  const DEFAULT_RECT = { top: 40, right: 24, width: 400, height: 680, pinned: false, minimized: false };
+  const MIN_W = 320, MAX_W = 900, MIN_H = 400, MAX_H = 800;
+  function clampRect(s) {
+    if (!s || typeof s !== "object") return;
+    if (typeof s.width === "number") s.width = Math.max(MIN_W, Math.min(s.width, MAX_W));
+    if (typeof s.height === "number") s.height = Math.max(MIN_H, Math.min(s.height, MAX_H));
+    if (typeof s.top === "number") s.top = Math.max(4, Math.min(s.top, (window.innerHeight || 800) - 100));
+    if (typeof s.left === "number") s.left = Math.max(4, Math.min(s.left, (window.innerWidth || 1200) - 100));
+  }
 
   let root = null;
   let headerEl = null;
@@ -24,6 +32,8 @@
             state = { ...DEFAULT_RECT, ...s };
             // visible default false if not set
             if (typeof s.visible !== "boolean") state.visible = false;
+            // 清理歷史污染：之前無限拉伸可能存下巨大寬高，強制 clamp
+            clampRect(state);
           } else {
             state.visible = false;
           }
@@ -50,9 +60,10 @@
     if (state.minimized) root.classList.add("minimized");
     // position: right-based to fixed, but we store left/top for drag
     // If we have stored left, use left, otherwise use right
+    clampRect(state);
     const hasLeft = typeof state.left === "number";
-    root.style.width = (state.width || 400) + "px";
-    root.style.height = (state.height || 600) + "px";
+    root.style.width = (state.width || DEFAULT_RECT.width) + "px";
+    root.style.height = (state.height || DEFAULT_RECT.height) + "px";
     if (hasLeft) {
       root.style.left = state.left + "px";
       root.style.right = "auto";
@@ -143,9 +154,12 @@
 
     // Prevent iframe from capturing drag when pinned? No.
 
-    // Global listeners for drag/resize
+    // Global listeners for drag/resize（window 層級避免 iframe 吞掉 mouseup 導致卡住無限拉伸）
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("blur", onMouseUp);
     window.addEventListener("resize", onWindowResize);
   }
 
@@ -242,54 +256,66 @@
     e.stopPropagation();
   }
 
+  let moveRaf = false;
+  let lastMoveEvent = null;
   function onMouseMove(e) {
-    if (isDragging && root) {
-      const dx = e.clientX - dragStart.x;
-      const dy = e.clientY - dragStart.y;
-      let newLeft = dragStart.left + dx;
-      let newTop = dragStart.top + dy;
+    if (!isDragging && !isResizing) return;
+    // rAF 節流，避免 mousemove 高頻觸發 layout thrash + 記憶體爆掉
+    lastMoveEvent = e;
+    if (moveRaf) return;
+    moveRaf = true;
+    requestAnimationFrame(() => {
+      moveRaf = false;
+      const ev = lastMoveEvent;
+      if (!ev) return;
+      if (isDragging && root) {
+        const dx = ev.clientX - dragStart.x;
+        const dy = ev.clientY - dragStart.y;
+        let newLeft = dragStart.left + dx;
+        let newTop = dragStart.top + dy;
 
-      // keep within viewport with margin 8
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const rect = root.getBoundingClientRect();
-      const w = rect.width;
-      const h = rect.height;
-      newLeft = Math.max(4, Math.min(newLeft, vw - w - 4));
-      newTop = Math.max(4, Math.min(newTop, vh - 32 - 4));
+        // keep within viewport with margin 8
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const rect = root.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+        newLeft = Math.max(4, Math.min(newLeft, vw - w - 4));
+        newTop = Math.max(4, Math.min(newTop, vh - 32 - 4));
 
-      root.style.left = newLeft + "px";
-      root.style.top = newTop + "px";
-      root.style.right = "auto";
-      // save
-      state.left = newLeft;
-      state.top = newTop;
-      delete state.right;
-    }
-    if (isResizing && root) {
-      const dx = e.clientX - resizeStart.x;
-      const dy = e.clientY - resizeStart.y;
-      let newW = resizeStart.w;
-      let newH = resizeStart.h;
-      if (resizeStart.dir === "br" || resizeStart.dir === "r") {
-        newW = resizeStart.w + dx;
+        root.style.left = newLeft + "px";
+        root.style.top = newTop + "px";
+        root.style.right = "auto";
+        // save
+        state.left = newLeft;
+        state.top = newTop;
+        delete state.right;
       }
-      if (resizeStart.dir === "br" || resizeStart.dir === "b") {
-        newH = resizeStart.h + dy;
+      if (isResizing && root) {
+        const dx = ev.clientX - resizeStart.x;
+        const dy = ev.clientY - resizeStart.y;
+        let newW = resizeStart.w;
+        let newH = resizeStart.h;
+        if (resizeStart.dir === "br" || resizeStart.dir === "r") {
+          newW = resizeStart.w + dx;
+        }
+        if (resizeStart.dir === "br" || resizeStart.dir === "b") {
+          newH = resizeStart.h + dy;
+        }
+        // constraints：硬上限避免無限拉伸吃掉記憶體
+        newW = Math.max(MIN_W, Math.min(newW, Math.min(window.innerWidth * 0.96, MAX_W)));
+        newH = Math.max(MIN_H, Math.min(newH, Math.min(window.innerHeight * 0.92, MAX_H)));
+        root.style.width = newW + "px";
+        root.style.height = newH + "px";
+        state.width = newW;
+        state.height = newH;
+        if (state.minimized) {
+          // if resizing while minimized, unminimize
+          state.minimized = false;
+          root.classList.remove("minimized");
+        }
       }
-      // constraints
-      newW = Math.max(320, Math.min(newW, window.innerWidth * 0.96));
-      newH = Math.max(380, Math.min(newH, window.innerHeight * 0.92));
-      root.style.width = newW + "px";
-      root.style.height = newH + "px";
-      state.width = newW;
-      state.height = newH;
-      if (state.minimized) {
-        // if resizing while minimized, unminimize
-        state.minimized = false;
-        root.classList.remove("minimized");
-      }
-    }
+    });
   }
 
   function onMouseUp() {

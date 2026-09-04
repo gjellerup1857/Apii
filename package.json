@@ -1,6 +1,6 @@
 {
   "name": "apii",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Apii - Brave/Chrome 擴充功能：自動擷取 fetch/XHR 請求參數與回應，支援浮動、側欄、懸浮拖曳",
   "private": true,
   "scripts": {

@@ -1,14 +1,14 @@
-/* Floating panel injected into page - 初始與彈窗同寬 380，高再拉長 240 至 960 */
+/* Floating panel injected into page - 默認 400x680，比 action popup 稍高（頁內不受 Chrome 600 限制），底部不遮住 */
 #api-inspector-floating-root {
   position: fixed;
-  top: 64px;
+  top: 40px;
   right: 24px;
-  width: 380px;
-  height: 960px;
+  width: 400px;
+  height: 680px;
   min-width: 320px;
   min-height: 400px;
-  max-width: 96vw;
-  max-height: 92vh;
+  max-width: min(900px, 96vw);
+  max-height: min(800px, 92vh);
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
